@@ -17,7 +17,7 @@ Role = Literal["patient", "clinician"]
 class LoginIn(BaseModel):
     email: str
     password: str
-    role: Optional[Role] = None  # the login tab used; a mismatch is refused
+    role: Role  # the login tab used (required); an account of the other role is refused
 
 
 class RegisterIn(BaseModel):

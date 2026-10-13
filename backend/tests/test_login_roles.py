@@ -10,6 +10,10 @@ def test_login_tab_must_match_role(client):
     r = client.post("/api/auth/login", json={**PATIENT, "role": "clinician"})
     assert r.status_code == 403 and "Patient login" in r.json()["detail"]
     assert client.post("/api/auth/login", json={**CLINICIAN, "role": "patient"}).status_code == 403
+    # the role is required, so no request can skip the check (e.g. from the API docs page)
+    assert client.post("/api/auth/login", json=PATIENT).status_code == 422
+    assert client.post("/api/auth/login", json=CLINICIAN).status_code == 422
+    assert client.post("/api/auth/login", json={**PATIENT, "role": "admin"}).status_code == 422
 
 
 def test_google_disabled_without_client_id(client, monkeypatch):

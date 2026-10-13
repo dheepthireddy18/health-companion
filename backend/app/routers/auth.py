@@ -22,8 +22,9 @@ def login(body: s.LoginIn, db: Session = Depends(get_db)):
     return _session(user, body.role)
 
 
-def _session(user: m.User, role) -> dict:
-    if role and user.role != role:
+def _session(user: m.User, role: str) -> dict:
+    """A token, but only for the role the person signed in as: patient and clinician logins are separate."""
+    if user.role != role:
         other = "Clinician" if user.role == "clinician" else "Patient"
         raise HTTPException(403, f"This is a {user.role} account. Please use {other} login.")
     return {"token": make_token(user.id), "user": s.UserOut.model_validate(user)}

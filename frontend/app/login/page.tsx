@@ -76,8 +76,14 @@ export default function Login() {
           <div className="mb-4 flex animate-slide-in items-center gap-3 rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-card">
             <Avatar name={current.name} size={36} />
             <p className="min-w-0 flex-1 text-sm"><span className="block truncate font-semibold">Signed in as {current.name}</span>
-              <span className="text-xs capitalize text-ink-muted">{current.role} · sign in below to switch this tab</span></p>
-            <Btn size="sm" variant="secondary" onClick={() => { window.location.href = current.role === "clinician" ? "/clinician" : "/"; }}>Continue</Btn>
+              <span className="text-xs text-ink-muted">
+                {mode === "signin" && current.role === role
+                  ? <><span className="capitalize">{current.role}</span> · or sign in below to switch this tab</>
+                  : `That's a ${current.role} account. Use ${current.role === "clinician" ? "Clinician" : "Patient"} login to continue with it.`}
+              </span></p>
+            {mode === "signin" && current.role === role && (
+              <Btn size="sm" variant="secondary" onClick={() => { window.location.href = current.role === "clinician" ? "/clinician" : "/"; }}>Continue</Btn>
+            )}
           </div>
         )}
         <div className="rounded-3xl border border-white/70 bg-white/85 p-6 shadow-lift backdrop-blur-xl sm:p-7">

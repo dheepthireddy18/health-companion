@@ -17,8 +17,9 @@ def client():
         yield c
 
 
-def login(client, email, password):
-    r = client.post("/api/auth/login", json={"email": email, "password": password})
+def login(client, email, password, role=None):
+    role = role or ("clinician" if email.endswith("@riversidehealth.example") else "patient")
+    r = client.post("/api/auth/login", json={"email": email, "password": password, "role": role})
     assert r.status_code == 200, r.text
     return {"Authorization": f"Bearer {r.json()['token']}"}
 
