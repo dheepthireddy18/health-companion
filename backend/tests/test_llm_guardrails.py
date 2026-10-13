@@ -9,7 +9,7 @@ from datetime import date
 from sqlalchemy import select
 
 
-def stats_for(email="asha.rao@care.test", days=30):
+def stats_for(email="asha.rao@gmail.com", days=30):
     with SessionLocal() as db:
         p = db.scalars(select(User).where(User.email == email)).first()
         return period_stats(db, p, days, date.today()), p

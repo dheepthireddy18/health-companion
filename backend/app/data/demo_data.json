@@ -35,7 +35,7 @@
   "patients": [
     {
       "name": "Asha Rao",
-      "email": "asha.rao@care.test",
+      "email": "asha.rao@gmail.com",
       "password": "patient123",
       "clinician": "arjun.shetty@riversidehealth.example",
       "phone": "+1 (732) 555-0120",
@@ -100,7 +100,7 @@
     },
     {
       "name": "Ravi Kumar",
-      "email": "ravi.kumar@care.test",
+      "email": "ravi.kumar@gmail.com",
       "password": "patient123",
       "clinician": "kavitha.menon@riversidehealth.example",
       "phone": "+1 (732) 555-0121",
@@ -165,7 +165,7 @@
     },
     {
       "name": "Meena Iyer",
-      "email": "meena.iyer@care.test",
+      "email": "meena.iyer@gmail.com",
       "password": "patient123",
       "clinician": "kavitha.menon@riversidehealth.example",
       "phone": "+1 (732) 555-0122",
@@ -230,7 +230,7 @@
     },
     {
       "name": "John Mathew",
-      "email": "john.mathew@care.test",
+      "email": "john.mathew@gmail.com",
       "password": "patient123",
       "clinician": "arjun.shetty@riversidehealth.example",
       "phone": "+1 (732) 555-0123",
@@ -295,7 +295,7 @@
     },
     {
       "name": "Priya Nair",
-      "email": "priya.nair@care.test",
+      "email": "priya.nair@gmail.com",
       "password": "patient123",
       "clinician": "arjun.shetty@riversidehealth.example",
       "phone": "+1 (732) 555-0124",
@@ -355,7 +355,7 @@
     },
     {
       "name": "Sam Thomas",
-      "email": "sam.thomas@care.test",
+      "email": "sam.thomas@gmail.com",
       "password": "patient123",
       "clinician": "kavitha.menon@riversidehealth.example",
       "phone": "+1 (732) 555-0125",

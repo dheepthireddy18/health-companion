@@ -43,7 +43,7 @@ The login page has **Sign in** and **Create account** tabs. Sign in asks whether
 | Role | Email | Password |
 |------|-------|----------|
 | Clinician | kavitha.menon@riversidehealth.example (endocrinology), arjun.shetty@riversidehealth.example (internal medicine) | clinician123 |
-| Patient | `@care.test`: asha.rao (BP rising), ravi.kumar (high sugar), meena.iyer (15-day streak, well controlled), john.mathew (lapsed streak, missed doses), priya.nair (stable), sam.thomas (stage 2 BP) | patient123 |
+| Patient | `@gmail.com`: asha.rao (BP rising), ravi.kumar (high sugar), meena.iyer (15-day streak, well controlled), john.mathew (lapsed streak, missed doses), priya.nair (stable), sam.thomas (stage 2 BP) | patient123 |
 
 Each patient has their own conditions, medicines, goals and profile. No chat history is seeded; conversations start when someone sends a message. Phone numbers use the fictional 555-01xx range and emails use reserved domains (`.test`, `.example`) that can never belong to a real person.
 

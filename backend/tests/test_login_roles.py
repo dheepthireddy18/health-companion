@@ -1,6 +1,6 @@
 from app import google_auth
 
-PATIENT = {"email": "meena.iyer@care.test", "password": "patient123"}
+PATIENT = {"email": "meena.iyer@gmail.com", "password": "patient123"}
 CLINICIAN = {"email": "kavitha.menon@riversidehealth.example", "password": "clinician123"}
 
 
@@ -29,7 +29,7 @@ def _google(monkeypatch, **claims):
 
 
 def test_google_signs_in_existing_account_by_email(client, monkeypatch):
-    _google(monkeypatch, email="Meena.Iyer@care.test", name="Meena")
+    _google(monkeypatch, email="Meena.Iyer@gmail.com", name="Meena")
     r = client.post("/api/auth/google", json={"credential": "x" * 20, "role": "patient"}).json()
     assert r["user"]["name"] == "Meena Iyer" and r["token"]
     assert client.post("/api/auth/google", json={"credential": "x" * 20, "role": "clinician"}).status_code == 403
@@ -45,9 +45,9 @@ def test_google_creates_new_patients_but_not_clinicians(client, monkeypatch):
 
 
 def test_google_rejects_tokens_for_other_sites_or_unverified_emails(client, monkeypatch):
-    _google(monkeypatch, email="meena.iyer@care.test", aud="someone-else")
+    _google(monkeypatch, email="meena.iyer@gmail.com", aud="someone-else")
     assert client.post("/api/auth/google", json={"credential": "x" * 20, "role": "patient"}).status_code == 401
-    _google(monkeypatch, email="meena.iyer@care.test", email_verified="false")
+    _google(monkeypatch, email="meena.iyer@gmail.com", email_verified="false")
     assert client.post("/api/auth/google", json={"credential": "x" * 20, "role": "patient"}).status_code == 401
 
 

@@ -8,7 +8,7 @@ from conftest import login
 
 # ---------- roles ----------
 def test_login_rejects_bad_password(client):
-    assert client.post("/api/auth/login", json={"email": "meena.iyer@care.test", "password": "nope", "role": "patient"}).status_code == 401
+    assert client.post("/api/auth/login", json={"email": "meena.iyer@gmail.com", "password": "nope", "role": "patient"}).status_code == 401
 
 
 def test_requires_sign_in(client):

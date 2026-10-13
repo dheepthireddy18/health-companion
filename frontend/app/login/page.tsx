@@ -13,7 +13,7 @@ type Mode = "signin" | "register";
 type Session = { token: string; user: User };
 
 const DEMO: Record<Role, { email: string; password: string }> = {
-  patient: { email: "meena.iyer@care.test", password: "patient123" },
+  patient: { email: "meena.iyer@gmail.com", password: "patient123" },
   clinician: { email: "kavitha.menon@riversidehealth.example", password: "clinician123" },
 };
 type Activity = "sedentary" | "light" | "moderate" | "active";

@@ -42,12 +42,12 @@ def test_turning_notifications_off_stops_everything(client, other_patient):
 
 
 def test_nothing_due_before_the_scheduled_time(client):
-    h = login(client, "priya.nair@care.test", "patient123")
+    h = login(client, "priya.nair@gmail.com", "patient123")
     assert due(client, h, 6, 0) == []
 
 
 def test_login_reminder_for_missed_check_in_once_a_day(client):
-    h = login(client, "john.mathew@care.test", "patient123")  # seeded with a lapsed streak
+    h = login(client, "john.mathew@gmail.com", "patient123")  # seeded with a lapsed streak
     first = client.post(f"/api/notifications/welcome?now={at(9)}", headers=h).json()
     assert first["title"] == "You missed yesterday's check-in"
     assert first["body"].startswith("John,")  # personal message
@@ -55,6 +55,6 @@ def test_login_reminder_for_missed_check_in_once_a_day(client):
 
 
 def test_no_login_reminder_if_already_checked_in(client):
-    h = login(client, "asha.rao@care.test", "patient123")
+    h = login(client, "asha.rao@gmail.com", "patient123")
     client.post(f"/api/checkin?day={DAY}", headers=h)
     assert client.post(f"/api/notifications/welcome?now={at(9)}", headers=h).json() is None
