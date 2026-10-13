@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useAuth } from "@/components/AuthGate";
 import ChatThread from "@/components/ChatThread";
 import { Chat, ChevronLeft, Close, Minimize, Search } from "@/components/icons";
 import { Avatar, Skeleton } from "@/components/ui";
@@ -61,10 +62,11 @@ export default function ClinicianChatDock({ children }: { children: ReactNode })
 function ThreadList({ threads, onPick, onClose, waiting }: {
   threads: Thread[] | null; onPick: (id: number) => void; onClose: () => void; waiting: number;
 }) {
+  const { user } = useAuth();
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<"all" | "waiting">("all");
-  const rows = useMemo(() => (threads ?? []).filter((t) =>
-    t.name.toLowerCase().includes(q.trim().toLowerCase()) && (filter === "all" || t.last_from_role === "patient")), [threads, q, filter]);
+  const [filter, setFilter] = useState<"all" | "mine" | "waiting">("all");
+  const rows = useMemo(() => (threads ?? []).filter((t) => t.name.toLowerCase().includes(q.trim().toLowerCase()) &&
+    (filter === "all" || (filter === "mine" ? t.clinician_id === user.id : t.last_from_role === "patient"))), [threads, q, filter, user.id]);
 
   return (
     <>
@@ -81,10 +83,10 @@ function ThreadList({ threads, onPick, onClose, waiting }: {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patients" aria-label="Search patients" className="!py-2 !pl-9" />
         </div>
         <div className="mt-2 flex gap-1 rounded-xl bg-slate-100 p-1 text-sm font-semibold">
-          {(["all", "waiting"] as const).map((f) => (
+          {(["all", "mine", "waiting"] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f}
               className={`flex-1 rounded-lg py-1.5 transition ${filter === f ? "bg-white text-ink shadow-sm" : "text-ink-muted hover:text-ink"}`}>
-              {f === "all" ? "All" : `Awaiting reply${waiting ? ` · ${waiting}` : ""}`}
+              {f === "all" ? "All" : f === "mine" ? "Mine" : `Awaiting${waiting ? ` · ${waiting}` : ""}`}
             </button>
           ))}
         </div>
@@ -101,7 +103,9 @@ function ThreadList({ threads, onPick, onClose, waiting }: {
                 <Avatar name={t.name} size={40} />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className={`truncate text-sm ${unanswered ? "font-bold" : "font-semibold"}`}>{t.name}</span>
+                    <span className={`truncate text-sm ${unanswered ? "font-bold" : "font-semibold"}`}>
+                      {t.name}{t.clinician_id === user.id && <span className="ml-1.5 rounded bg-brand-50 px-1 py-px text-[0.6rem] font-bold uppercase text-brand-700">Mine</span>}
+                    </span>
                     {t.last_at && <span className="shrink-0 text-[0.7rem] text-slate-400">{ago(t.last_at)}</span>}
                   </span>
                   <span className={`block truncate text-xs ${unanswered ? "font-medium text-ink" : "text-ink-muted"}`}>

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthGate";
 import GoalInput from "@/components/GoalInput";
 import { useToast } from "@/components/Toast";
-import { Bell, LogOut, Siren, Sparkles, Target, Volume } from "@/components/icons";
+import { Bell, LogOut, Siren, Sparkles, Target, Users, Volume } from "@/components/icons";
 import { Btn, Card, Field, PageTitle, Toggle } from "@/components/ui";
 import { patch } from "@/lib/api";
 import { emergencyNumber } from "@/lib/emergency";
@@ -21,6 +21,10 @@ export default function SettingsPage() {
   const saveNumber = async () => {
     if (number.trim() === (user.emergency_number ?? "")) return;
     try { await patch("/auth/me", { emergency_number: number.trim() }); await refresh(); toast("Emergency number saved"); }
+    catch (e) { toast(e instanceof Error ? e.message : "Could not save", "error"); }
+  };
+  const setStatus = async (change: { available?: boolean; on_call?: boolean }, note: string) => {
+    try { await patch("/auth/me", change); await refresh(); toast(note); }
     catch (e) { toast(e instanceof Error ? e.message : "Could not save", "error"); }
   };
   const toggleReminders = async (on: boolean) => {
@@ -47,6 +51,23 @@ export default function SettingsPage() {
             </div>
           </div>
         </Card>
+
+        {!patient && (
+          <Card delay={100} title="Availability" icon={<Users size={16} className="text-brand-600" />}>
+            <div className="divide-y divide-slate-100">
+              <div className="pb-3">
+                <Toggle checked={user.available !== false} label="Available to patients"
+                  hint="Turn off when you're away. Your patients are pointed to on-call doctors meanwhile."
+                  onChange={(on) => setStatus(on ? { available: true } : { available: false, on_call: false }, on ? "You're available" : "Marked as away")} />
+              </div>
+              <div className="pt-3">
+                <Toggle checked={!!user.on_call && user.available !== false} label="On call"
+                  hint="Cover for colleagues who are away: their patients see you as the on-call doctor."
+                  onChange={(on) => setStatus(on ? { on_call: true, available: true } : { on_call: false }, on ? "You're on call" : "Off call")} />
+              </div>
+            </div>
+          </Card>
+        )}
 
         {patient && (
           <Card delay={100} title="Reminders" icon={<Bell size={16} className="text-amber-500" />}>

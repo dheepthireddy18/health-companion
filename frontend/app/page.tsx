@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/components/AuthGate";
+import PlanWelcome from "@/components/PlanWelcome";
 import StreakHero from "@/components/StreakHero";
 import { useToast } from "@/components/Toast";
 import { Activity, CheckCircle, ChevronRight, Flame, Pill, Sparkles, Utensils, Zap } from "@/components/icons";
@@ -46,6 +47,7 @@ export default function TodayPage() {
         {greeting()}, {user.name.split(" ")[0]} <span className="inline-block origin-[70%_70%] animate-wave">👋</span>
       </PageTitle>
       <ErrorNote error={error} />
+      <PlanWelcome />
 
       {!data ? (
         <div className="grid gap-5 lg:grid-cols-3"><Skeleton className="h-64 lg:col-span-2" /><Skeleton className="h-64" /></div>

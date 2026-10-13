@@ -1,21 +1,26 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
+import { useAuth } from "@/components/AuthGate";
 import { useOpenChat } from "@/components/ClinicianChatDock";
 import SummaryBox from "@/components/SummaryBox";
 import { Alert, Chat, Droplet, Flame, Heart, Pill as PillIcon, Scale, Search, Users } from "@/components/icons";
 import { Avatar, Btn, Chips, CountUp, Empty, ErrorNote, PageTitle, Pill, Skeleton } from "@/components/ui";
 import { localDate, niceDate, useFetch } from "@/lib/api";
-import type { PatientRow } from "@/lib/types";
+import type { ClinicianPublic, PatientRow } from "@/lib/types";
 
 export default function PatientList() {
   const { data, error } = useFetch<PatientRow[]>(`/clinician/patients?today=${localDate()}`);
+  const { user } = useAuth();
+  const docs = useFetch<ClinicianPublic[]>("/auth/clinicians");
+  const doctorName = (id: number | null) => docs.data?.find((d) => d.id === id)?.name;
   const openChat = useOpenChat();
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<"all" | "attention">("all");
+  const [filter, setFilter] = useState<"all" | "mine" | "attention">("all");
 
-  const rows = useMemo(() => (data ?? []).filter((p) =>
-    p.name.toLowerCase().includes(q.trim().toLowerCase()) && (filter === "all" || p.attention >= 2)), [data, q, filter]);
+  const rows = useMemo(() => (data ?? []).filter((p) => p.name.toLowerCase().includes(q.trim().toLowerCase()) &&
+    (filter === "all" || (filter === "mine" ? p.clinician_id === user.id : p.attention >= 2))), [data, q, filter, user.id]);
+  const mine = data?.filter((p) => p.clinician_id === user.id).length ?? 0;
   const attention = data?.filter((p) => p.attention >= 2).length ?? 0;
   const adherence = data?.filter((p) => p.med_adherence_7d !== null) ?? [];
   const avgAdherence = adherence.length ? Math.round(adherence.reduce((a, p) => a + (p.med_adherence_7d ?? 0), 0) / adherence.length) : 0;
@@ -39,48 +44,61 @@ export default function PatientList() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patients" aria-label="Search patients" className="!pl-10" />
         </div>
         <Chips label="Filter" value={filter} onChange={setFilter}
-          options={[{ value: "all", label: "All" }, { value: "attention", label: `Needs attention · ${attention}` }]} />
+          options={[{ value: "all", label: "All" }, { value: "mine", label: `My patients · ${mine}` }, { value: "attention", label: `Needs attention · ${attention}` }]} />
       </div>
 
       {!data && <div className="space-y-4">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-40" />)}</div>}
       {data && rows.length === 0 && <Empty icon={<Users size={22} />}>No patients match.</Empty>}
-      <div className="space-y-4">
-        {rows.map((p, i) => (
-          <article key={p.id} style={{ animationDelay: `${200 + i * 50}ms` }}
-            className={`animate-fade-up rounded-2xl border bg-white p-5 shadow-card transition hover:shadow-lift ${p.attention >= 3 ? "border-rose-200" : p.attention === 2 ? "border-orange-200" : "border-slate-200/80"}`}>
-            <SummaryBox patientId={p.id}
-              actions={<Btn size="sm" variant="secondary" onClick={() => openChat(p.id)} aria-label={`Message ${p.name}`}><Chat size={15} /> <span className="hidden sm:inline">Message</span></Btn>}>
-              <Link href={`/clinician/patients/${p.id}`} className="group flex items-center gap-3">
-                <Avatar name={p.name} size={44} />
-                <span>
-                  <span className="flex items-center gap-2 text-lg font-bold group-hover:text-brand-700">
-                    {p.name}
-                    {p.attention >= 2 && <span className={`h-2 w-2 rounded-full ${p.attention >= 3 ? "bg-rose-500" : "bg-orange-500"}`} aria-label="Needs attention" />}
+      {[
+        { key: "mine", title: "Your patients", hint: "Assigned to you", list: rows.filter((p) => p.clinician_id === user.id) },
+        { key: "others", title: "Other patients in the clinic", hint: "Assigned to colleagues — you can still view and message them",
+          list: rows.filter((p) => p.clinician_id !== user.id) },
+      ].filter((g) => g.list.length).map((g, gi) => (
+        <section key={g.key} className="space-y-4" aria-label={g.title}>
+          <div className="flex items-baseline justify-between gap-3 pt-2">
+            <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-ink-muted">
+              {g.title}<span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-ink-soft">{g.list.length}</span>
+            </h2>
+            <span className="hidden text-xs text-ink-muted sm:inline">{g.hint}</span>
+          </div>
+          {g.list.map((p, i) => (
+            <article key={p.id} style={{ animationDelay: `${200 + gi * 150 + i * 50}ms` }}
+              className={`animate-fade-up rounded-2xl border bg-white p-5 shadow-card transition hover:shadow-lift ${p.attention >= 3 ? "border-rose-200" : p.attention === 2 ? "border-orange-200" : "border-slate-200/80"}`}>
+              <SummaryBox patientId={p.id}
+                actions={<Btn size="sm" variant="secondary" onClick={() => openChat(p.id)} aria-label={`Message ${p.name}`}><Chat size={15} /> <span className="hidden sm:inline">Message</span></Btn>}>
+                <Link href={`/clinician/patients/${p.id}`} className="group flex items-center gap-3">
+                  <Avatar name={p.name} size={44} />
+                  <span>
+                    <span className="flex items-center gap-2 text-lg font-bold group-hover:text-brand-700">
+                      {p.name}
+                      {p.attention >= 2 && <span className={`h-2 w-2 rounded-full ${p.attention >= 3 ? "bg-rose-500" : "bg-orange-500"}`} aria-label="Needs attention" />}
+                    </span>
+                    <span className="block text-xs text-ink-muted">{p.age ? `${p.age} yrs · ` : ""}Last check-in {p.last_check_in ? niceDate(p.last_check_in) : "never"}
+                      {" · "}{p.clinician_id === user.id ? <b className="font-semibold text-brand-700">Your patient</b> : doctorName(p.clinician_id) ? `${doctorName(p.clinician_id)}'s patient` : "No doctor"}</span>
                   </span>
-                  <span className="block text-xs text-ink-muted">{p.age ? `${p.age} yrs · ` : ""}Last check-in {p.last_check_in ? niceDate(p.last_check_in) : "never"}</span>
-                </span>
-              </Link>
-            </SummaryBox>
-            <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              <Stat icon={<Heart size={14} className="text-rose-500" />} label="Blood pressure">
-                {p.latest_bp ? <><b>{p.latest_bp.value}</b> <Pill severity={p.latest_bp.severity}>{p.latest_bp.status}</Pill></> : "—"}
-              </Stat>
-              <Stat icon={<Droplet size={14} className="text-sky-500" />} label="Blood sugar">
-                {p.latest_glucose ? <><b>{p.latest_glucose.value}</b> <Pill severity={p.latest_glucose.severity}>{p.latest_glucose.status}</Pill></> : "—"}
-              </Stat>
-              <Stat icon={<Scale size={14} className="text-violet-500" />} label="Latest BMI">{p.latest_bmi ? <b>{p.latest_bmi.value}</b> : "—"}</Stat>
-              <Stat icon={<Flame size={14} className="text-orange-500" />} label="Streak"><b>{p.streak}</b> days</Stat>
-              <Stat icon={<PillIcon size={14} className="text-sky-500" />} label="Medicines (7d)">
-                {p.med_adherence_7d === null ? "—" : (
-                  <span className="flex items-center gap-2"><b>{p.med_adherence_7d}%</b>
-                    <span className="h-1.5 w-14 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-sky-500" style={{ width: `${p.med_adherence_7d}%` }} /></span>
-                  </span>
-                )}
-              </Stat>
-            </dl>
-          </article>
-        ))}
-      </div>
+                </Link>
+              </SummaryBox>
+              <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                <Stat icon={<Heart size={14} className="text-rose-500" />} label="Blood pressure">
+                  {p.latest_bp ? <><b>{p.latest_bp.value}</b> <Pill severity={p.latest_bp.severity}>{p.latest_bp.status}</Pill></> : "—"}
+                </Stat>
+                <Stat icon={<Droplet size={14} className="text-sky-500" />} label="Blood sugar">
+                  {p.latest_glucose ? <><b>{p.latest_glucose.value}</b> <Pill severity={p.latest_glucose.severity}>{p.latest_glucose.status}</Pill></> : "—"}
+                </Stat>
+                <Stat icon={<Scale size={14} className="text-violet-500" />} label="Latest BMI">{p.latest_bmi ? <b>{p.latest_bmi.value}</b> : "—"}</Stat>
+                <Stat icon={<Flame size={14} className="text-orange-500" />} label="Streak"><b>{p.streak}</b> days</Stat>
+                <Stat icon={<PillIcon size={14} className="text-sky-500" />} label="Medicines (7d)">
+                  {p.med_adherence_7d === null ? "—" : (
+                    <span className="flex items-center gap-2"><b>{p.med_adherence_7d}%</b>
+                      <span className="h-1.5 w-14 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-sky-500" style={{ width: `${p.med_adherence_7d}%` }} /></span>
+                    </span>
+                  )}
+                </Stat>
+              </dl>
+            </article>
+          ))}
+        </section>
+      ))}
     </>
   );
 }

@@ -36,7 +36,7 @@ def patients(today: Optional[date] = None, db: Session = Depends(get_db)):
         streak = streak_info(checkin_days(db, p.id), today)
         taken, expected = med_doses(db, p.id, today - timedelta(days=7), today - timedelta(days=1))
         out.append({
-            "id": p.id, "name": p.name, "age": p.age,
+            "id": p.id, "name": p.name, "age": p.age, "clinician_id": p.clinician_id,
             "latest_bp": {"value": f"{bp.systolic}/{bp.diastolic}", "status": bp.status, "severity": bp.severity,
                           "at": bp.measured_at} if bp else None,
             "latest_glucose": {"value": g.value, "status": g.status, "severity": g.severity, "at": g.measured_at} if g else None,
@@ -97,7 +97,7 @@ def threads(db: Session = Depends(get_db)):
     for p in db.scalars(select(m.User).where(m.User.role == "patient").order_by(m.User.name)):
         last = db.execute(select(m.Message, m.User.role).join(m.User, m.User.id == m.Message.sender_id)
                           .where(m.Message.patient_id == p.id).order_by(m.Message.id.desc()).limit(1)).first()
-        out.append(s.ThreadOut(patient_id=p.id, name=p.name, last_body=last[0].body if last else None,
+        out.append(s.ThreadOut(patient_id=p.id, name=p.name, clinician_id=p.clinician_id, last_body=last[0].body if last else None,
                                last_from_role=last[1] if last else None, last_at=last[0].created_at if last else None))
     return sorted(out, key=lambda t: t.last_at or datetime.min, reverse=True)
 

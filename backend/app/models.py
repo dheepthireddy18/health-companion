@@ -32,6 +32,9 @@ class User(Base):
     emergency_contact_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     emergency_contact_phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     bio: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # clinician-only: seeing patients right now, and covering for colleagues who are away
+    available: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=True)
+    on_call: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
 
 
 class GlucoseReading(Base):

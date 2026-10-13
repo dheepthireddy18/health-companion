@@ -57,13 +57,23 @@ def test_food_text_creates_entries_and_energy_balance(client, patient):
     assert e["intake"] == 130 + 180 and e["state"] == "under"
 
 
-def test_one_tap_matches_goal(client, patient):
+def test_matched_goal_only_when_both_goals_are_met(client, patient):
     day = "2020-01-02"
     client.post("/api/food", json={"text": "chips", "meal_type": "snack", "day": day}, headers=patient)
+    e = client.get(f"/api/energy?day={day}", headers=patient).json()
+    assert e["goal_met"] is False and len(e["goal_missing"]) == 2
+    r = client.post(f"/api/food/matched-goal?day={day}", headers=patient)
+    assert r.status_code == 409 and "active minutes" in r.json()["detail"]
+    assert {x["source"] for x in client.get(f"/api/food?day={day}", headers=patient).json()} == {"text"}  # nothing invented
+
+    goal = client.get("/api/auth/me", headers=patient).json()
+    client.post("/api/activity", json={"kind": "yoga", "duration_min": goal["activity_goal_min"], "intensity": "light", "day": day}, headers=patient)
+    # Eat up to the goal in steps smaller than the tolerance band, so we land inside it.
+    while client.get(f"/api/energy?day={day}", headers=patient).json()["state"] == "under":
+        client.post("/api/food", json={"text": "an apple", "meal_type": "snack", "day": day}, headers=patient)
+    assert client.get(f"/api/energy?day={day}", headers=patient).json()["goal_met"] is True
     e = client.post(f"/api/food/matched-goal?day={day}", headers=patient).json()
-    assert e["state"] == "matched" and e["net"] == e["goal"]
-    entries = client.get(f"/api/food?day={day}", headers=patient).json()
-    assert {x["source"] for x in entries} == {"text", "one_tap"}
+    assert e["state"] == "matched" and e["net"] >= e["goal"] * 0.9
 
 
 def test_activity_burn_uses_latest_weight_and_offsets_intake(client, patient):

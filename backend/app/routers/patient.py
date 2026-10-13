@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import calories as cal, models as m, schemas as s
+from .. import care_team, calories as cal, models as m, schemas as s
 from ..database import get_db
 from ..security import require_patient
 from ..stats import checkin_days, day_totals, latest
@@ -59,8 +59,15 @@ def home(day: Optional[date] = None, user: m.User = User, db: Session = Depends(
         "status": _status_card(db, user, datetime.combine(today, datetime.now().time())),
         "streak": streak_info(checkin_days(db, user.id), today),
         "energy": energy(today, user, db),
-        "clinician": s.ClinicianInfo.model_validate(clinician) if clinician else None,
+        "clinician": _clinician_info(clinician) if clinician else None,
+        # Doctors covering for colleagues; the app offers them when the patient's own doctor is away.
+        "on_call": [_clinician_info(c) for c in care_team.on_call_cover(db, user.clinician_id)],
     }
+
+
+def _clinician_info(c: m.User) -> s.ClinicianInfo:
+    return s.ClinicianInfo(id=c.id, name=c.name, phone=c.phone, bio=c.bio,
+                           available=care_team.is_available(c), on_call=care_team.is_on_call(c))
 
 
 @router.post("/checkin", status_code=201)
@@ -193,15 +200,19 @@ def preview_food(body: s.FoodPreviewIn):
 
 @router.post("/food/matched-goal", status_code=201)
 def matched_goal(day: Optional[date] = None, user: m.User = User, db: Session = Depends(get_db)):
-    """One tap: 'I already ate to my goal today' - fills the remaining calories so the day is complete."""
+    """Confirm the day was on plan. Only allowed once the logged numbers already meet both goals; the small gap
+    left inside the tolerance is recorded as a self-declared entry so the day closes exactly on target."""
     today = day or date.today()
-    totals = day_totals(db, user.id, today)
-    remaining = round(user.calorie_goal + totals["burned"] - totals["intake"])
+    e = energy(today, user, db)
+    if not e["goal_met"]:
+        raise HTTPException(409, "Not yet: " + " and ".join(e["goal_missing"]) + ".")
+    remaining = round(e["goal"] - e["net"])
     if remaining > 0:
         db.add(m.FoodEntry(user_id=user.id, day=today, meal_type="snack", name="Rest of the day, on plan (one tap)",
                            calories=remaining, source="one_tap"))
         db.commit()
-    return energy(today, user, db)
+        e = energy(today, user, db)
+    return e
 
 
 @router.delete("/food/{item_id}", status_code=204)
@@ -214,9 +225,15 @@ def delete_food(item_id: int, user: m.User = User, db: Session = Depends(get_db)
 def energy(day: Optional[date] = None, user: m.User = User, db: Session = Depends(get_db)):
     today = day or date.today()
     t = day_totals(db, user.id, today)
-    return {**cal.energy_balance(user.calorie_goal, t["intake"], t["burned"], user.activity_goal_min,
-                                 t["active_min"], _weight(db, user)),
-            "active_min": t["active_min"], "activity_goal_min": user.activity_goal_min}
+    e = cal.energy_balance(user.calorie_goal, t["intake"], t["burned"], user.activity_goal_min,
+                           t["active_min"], _weight(db, user))
+    missing = []
+    if e["state"] != "matched":
+        missing.append(f"net calories must be within {round(cal.TOLERANCE * 100)}% of your {user.calorie_goal} kcal goal")
+    if t["active_min"] < user.activity_goal_min:
+        missing.append(f"reach {user.activity_goal_min} active minutes ({t['active_min']} so far)")
+    return {**e, "active_min": t["active_min"], "activity_goal_min": user.activity_goal_min,
+            "goal_met": not missing, "goal_missing": missing}
 
 
 # ---------- activity ----------

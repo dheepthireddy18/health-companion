@@ -1,5 +1,5 @@
 {
-  "about": "Demo clinic used by app/seed.py. Phone numbers use the 555-0100-0199 range reserved for fiction and emails use reserved domains (.test, .example), so nothing can reach a real person. story: bp_start is (systolic, diastolic), bp_drift_90d is the systolic rise over 90 days, rates are daily probabilities, checkin_streak is the unbroken run ending today.",
+  "about": "Demo clinic used by app/seed.py. Phone numbers use the 555-0100-0199 range reserved for fiction and emails use reserved domains (.test, .example), so nothing can reach a real person. story: bp_start is (systolic, diastolic), bp_drift_90d is the systolic rise over 90 days, rates are daily probabilities, checkin_streak is the unbroken run ending today. available: seeing patients now; on_call: covering for colleagues who are away.",
   "clinicians": [
     {
       "name": "Dr. Kavitha Menon",
@@ -7,7 +7,9 @@
       "phone": "+1 (732) 555-0110",
       "gender": "Female",
       "bio": "Endocrinologist · Diabetes and thyroid care · 14 years in practice",
-      "password": "clinician123"
+      "password": "clinician123",
+      "available": true,
+      "on_call": false
     },
     {
       "name": "Dr. Arjun Shetty",
@@ -15,7 +17,19 @@
       "phone": "+1 (732) 555-0111",
       "gender": "Male",
       "bio": "Internal medicine · Hypertension and heart health · 9 years in practice",
-      "password": "clinician123"
+      "password": "clinician123",
+      "available": true,
+      "on_call": true
+    },
+    {
+      "name": "Dr. Neil D'Souza",
+      "email": "neil.dsouza@riversidehealth.example",
+      "phone": "+1 (732) 555-0112",
+      "gender": "Male",
+      "bio": "Family medicine · Preventive care and lifestyle clinics · On leave until next month",
+      "password": "clinician123",
+      "available": false,
+      "on_call": false
     }
   ],
   "patients": [

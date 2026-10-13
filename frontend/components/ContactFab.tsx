@@ -23,6 +23,8 @@ export default function ContactFab() {
   const [chat, setChat] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout>>();
   const clinician = home?.clinician;
+  const away = !!home && (!clinician || !clinician.available);
+  const cover = away ? (home?.on_call ?? []) : [];
   const first = clinician?.name ?? "my clinician";
 
   // Read state: the id of the newest care-team message this person has seen, per account on this device.
@@ -67,22 +69,39 @@ export default function ContactFab() {
   return (
     <>
       {chat && (
-        <ChatPanel name={first} messages={messages.data} error={messages.error} onClose={() => setChat(false)}
+        <ChatPanel name={first} away={away} messages={messages.data} error={messages.error} onClose={() => setChat(false)}
           onSend={async (body) => { await post("/messages", { body }); await messages.reload(); }} />
       )}
       <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3 sm:bottom-7 sm:right-7"
         onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) hide(); }}>
         {open && !chat && (
           <div className="flex flex-col items-end gap-2.5" role="menu" aria-label={`Contact ${first}`}>
+            {away && (
+              <p className="animate-pop-in rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 shadow-sm ring-1 ring-amber-600/20">
+                {clinician ? `${first} is away` : "No doctor assigned"}{cover.length ? " · on-call cover below" : ""}
+              </p>
+            )}
             <button role="menuitem" className={`${option} animate-pop-in`} style={{ animationDelay: "60ms" }}
               onClick={() => { setChat(true); setOpen(false); }}>
               <span className="relative grid h-9 w-9 place-items-center rounded-full bg-brand-50 text-brand-700">
                 <Chat size={18} />
                 {unread > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />}
               </span>
-              {unread > 0 ? `${unread} new message${unread === 1 ? "" : "s"}` : `Text ${first}`}
+              {unread > 0 ? `${unread} new message${unread === 1 ? "" : "s"}` : away ? "Text the care team" : `Text ${first}`}
             </button>
-            {clinician?.phone ? (
+            {away ? (
+              cover.length ? cover.map((c) => (
+                <a key={c.id} role="menuitem" href={c.phone ? `tel:${c.phone}` : undefined} className={`${option} animate-pop-in`}>
+                  <span className="grid h-9 w-9 place-items-center rounded-full bg-violet-50 text-violet-700"><Phone size={18} /></span>
+                  <span className="text-left leading-tight">Call on-call doctor<span className="block text-xs font-normal text-ink-muted">{c.name}</span></span>
+                </a>
+              )) : (
+                <span role="menuitem" aria-disabled className={`${option} animate-pop-in cursor-not-allowed opacity-70 hover:translate-x-0 hover:ring-slate-200`}>
+                  <span className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-400"><Phone size={18} /></span>
+                  No on-call doctor right now — send a message
+                </span>
+              )
+            ) : clinician?.phone ? (
               <a role="menuitem" href={`tel:${clinician.phone}`} className={`${option} animate-pop-in`}>
                 <span className="grid h-9 w-9 place-items-center rounded-full bg-sky-50 text-sky-700"><Phone size={18} /></span>
                 Call {first}
@@ -114,8 +133,8 @@ export default function ContactFab() {
   );
 }
 
-function ChatPanel({ name, messages, error, onSend, onClose }: {
-  name: string; messages: ChatMessage[] | null; error: string | null; onSend: (body: string) => Promise<void>; onClose: () => void;
+function ChatPanel({ name, away, messages, error, onSend, onClose }: {
+  name: string; away: boolean; messages: ChatMessage[] | null; error: string | null; onSend: (body: string) => Promise<void>; onClose: () => void;
 }) {
   return (
     <div role="dialog" aria-label="Chat with your care team"
@@ -124,7 +143,7 @@ function ChatPanel({ name, messages, error, onSend, onClose }: {
         <Avatar name={name} size={38} className="ring-2 ring-white/40" />
         <div className="min-w-0 flex-1">
           <p className="truncate font-bold">Your care team</p>
-          <p className="truncate text-xs text-white/80">{name} and colleagues · replies during clinic hours</p>
+          <p className="truncate text-xs text-white/80">{away ? `${name} is away · on-call doctors will reply` : `${name} and colleagues · replies during clinic hours`}</p>
         </div>
         <button onClick={onClose} aria-label="Close chat" className="grid h-9 w-9 place-items-center rounded-full hover:bg-white/15"><Close size={18} /></button>
       </header>

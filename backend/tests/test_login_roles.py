@@ -48,7 +48,7 @@ def test_google_rejects_tokens_for_other_sites_or_unverified_emails(client, monk
 
 
 def test_patient_can_register_and_is_saved(client):
-    body = {"name": "Neha Verma", "email": "Neha.Verma@care.test", "password": "strongpass1", "age": 29, "phone": " "}
+    body = {"name": "Neha Verma", "email": "Neha.Verma@care.test", "password": "strongpass1", "age": 29, "phone": " ", "height_cm": 165, "weight_kg": 60}
     r = client.post("/api/auth/register", json=body)
     assert r.status_code == 201, r.text
     user = r.json()["user"]
@@ -62,7 +62,38 @@ def test_patient_can_register_and_is_saved(client):
 
 
 def test_register_validates_input(client):
-    ok = {"name": "Test Person", "email": "t.person@care.test", "password": "longenough"}
+    ok = {"name": "Test Person", "email": "t.person@care.test", "password": "longenough", "height_cm": 170, "weight_kg": 70}
     assert client.post("/api/auth/register", json={**ok, "password": "short"}).status_code == 422
     assert client.post("/api/auth/register", json={**ok, "email": "not-an-email"}).status_code == 422
     assert client.post("/api/auth/register", json={**ok, "name": "   "}).status_code == 422
+    no_body = {k: v for k, v in ok.items() if k not in ("height_cm", "weight_kg")}
+    assert client.post("/api/auth/register", json=no_body).status_code == 422  # height and weight are required
+
+
+def test_patients_choose_a_doctor_and_on_call_covers_when_away(client):
+    docs = client.get("/api/auth/clinicians").json()
+    assert {"email", "phone"}.isdisjoint(docs[0])  # public list has no contact details
+    away = next(d for d in docs if not d["available"])
+    on_call = next(d for d in docs if d["on_call"])
+
+    r = client.post("/api/auth/register", json={"name": "Choosy Patient", "email": "choosy@care.test",
+                                                 "password": "longenough1", "clinician_id": away["id"], "height_cm": 160, "weight_kg": 55}).json()
+    assert r["user"]["clinician_id"] == away["id"]  # allowed to pick an away doctor
+    h = {"Authorization": f"Bearer {r['token']}"}
+    home = client.get("/api/home", headers=h).json()
+    assert home["clinician"]["available"] is False and on_call["id"] in [c["id"] for c in home["on_call"]]
+
+    # change doctor later; 0 means any available doctor, which never picks an away one
+    assert client.patch("/api/auth/me", json={"clinician_id": on_call["id"]}, headers=h).json()["clinician_id"] == on_call["id"]
+    assert client.patch("/api/auth/me", json={"clinician_id": 0}, headers=h).json()["clinician_id"] != away["id"]
+    assert client.patch("/api/auth/me", json={"clinician_id": 99999}, headers=h).status_code == 422
+    assert client.post("/api/auth/register", json={"name": "Auto Patient", "email": "auto@care.test",
+                                                    "password": "longenough1", "height_cm": 180, "weight_kg": 80}).json()["user"]["clinician_id"] != away["id"]
+
+
+def test_only_clinicians_set_availability(client, patient, clinician):
+    assert client.patch("/api/auth/me", json={"on_call": True}, headers=patient).status_code == 403
+    assert client.patch("/api/auth/me", json={"clinician_id": 1}, headers=clinician).status_code == 403
+    r = client.patch("/api/auth/me", json={"available": False}, headers=clinician).json()
+    assert r["available"] is False
+    client.patch("/api/auth/me", json={"available": True}, headers=clinician)

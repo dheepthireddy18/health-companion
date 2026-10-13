@@ -1,8 +1,9 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthGate";
+import DoctorPicker from "@/components/DoctorPicker";
 import { useToast } from "@/components/Toast";
-import { Heart, Phone, Shield, User as UserIcon } from "@/components/icons";
+import { Heart, Phone, Shield, User as UserIcon, Users } from "@/components/icons";
 import { Avatar, Btn, Card, Chips, Field } from "@/components/ui";
 import { patch } from "@/lib/api";
 import type { User } from "@/lib/types";
@@ -33,6 +34,15 @@ export default function ProfilePage() {
     : ["name", "phone", "bio"];
   const complete = Math.round((fields.filter((k) => form[k].trim()).length / fields.length) * 100);
   const changed = (Object.keys(form) as (keyof Form)[]).filter((k) => form[k].trim() !== initial[k].trim());
+
+  const chooseDoctor = async (id: number) => {
+    try {
+      const u = await patch<User>("/auth/me", { clinician_id: id });
+      await refresh();
+      toast(id === 0 ? "Matched with an available doctor" : "Doctor updated");
+      return u;
+    } catch (e) { toast(e instanceof Error ? e.message : "Could not change doctor", "error"); }
+  };
 
   const save = async () => {
     const body: Record<string, string | number> = {};
@@ -101,6 +111,10 @@ export default function ProfilePage() {
                   <Field label="Allergies"><textarea rows={2} maxLength={300} {...bind("allergies")} placeholder="e.g. penicillin, peanuts" /></Field>
                 </div>
               </div>
+            </Card>
+            <Card delay={170} title="My doctor" icon={<Users size={16} className="text-violet-600" />}
+              right={<span className="text-xs text-ink-muted">Saves when you choose</span>}>
+              <DoctorPicker value={user.clinician_id ?? 0} onChange={chooseDoctor} compact />
             </Card>
             <Card delay={200} title="Emergency contact" icon={<Shield size={16} className="text-amber-500" />}>
               <div className="grid gap-4 sm:grid-cols-2">

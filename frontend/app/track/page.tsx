@@ -99,7 +99,25 @@ function EnergyOverview({ energy: e, reload, day }: { energy: Energy | null; rel
           onSave={async (n) => { await patch("/auth/me", { calorie_goal: n }); await refresh(); reload(); }} />
         <GoalInput label="Activity goal" unit="min" min={0} max={300} value={user.activity_goal_min}
           onSave={async (n) => { await patch("/auth/me", { activity_goal_min: n }); await refresh(); reload(); }} />
-        <Btn variant="secondary" size="sm" onClick={matched} className="mt-auto"><Check size={16} /> I matched my goal</Btn>
+        <div className="mt-auto">
+          <Btn variant={e.goal_met ? "primary" : "secondary"} size="sm" onClick={matched} disabled={!e.goal_met} className="w-full"
+            title={e.goal_met ? undefined : "Unlocks when both goals below are met"}>
+            <Check size={16} /> I matched my goal
+          </Btn>
+          <ul className="mt-2 space-y-1 text-xs" aria-label="What the button needs">
+            {[
+              { ok: e.state === "matched", text: `Calories within 10% of ${e.goal}` },
+              { ok: e.active_min >= e.activity_goal_min, text: `${e.activity_goal_min} active minutes` },
+            ].map((c) => (
+              <li key={c.text} className={`flex items-center gap-1.5 ${c.ok ? "text-brand-700" : "text-ink-muted"}`}>
+                <span aria-hidden className={`grid h-4 w-4 place-items-center rounded-full text-[0.6rem] font-bold ${c.ok ? "bg-brand-500 text-white" : "bg-slate-200 text-slate-500"}`}>
+                  {c.ok ? "✓" : "·"}
+                </span>
+                {c.text}<span className="sr-only">{c.ok ? ": done" : ": not yet"}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </section>
   );

@@ -3,7 +3,11 @@ export interface User {
   emergency_number: string | null; calorie_goal: number; activity_goal_min: number; notifications_enabled: boolean;
   age: number | null; gender: string | null; height_cm: number | null; blood_type: string | null; allergies: string | null;
   emergency_contact_name: string | null; emergency_contact_phone: string | null; bio: string | null;
+  clinician_id: number | null; available: boolean | null; on_call: boolean | null;
 }
+/** A doctor as anyone may see them (no contact details). */
+export interface ClinicianPublic { id: number; name: string; gender: string | null; bio: string | null; available: boolean; on_call: boolean }
+export interface ClinicianInfo { id: number; name: string; phone: string | null; bio: string | null; available: boolean; on_call: boolean }
 export interface Status { status: string; severity: number; message: string }
 export interface Glucose extends Status { id: number; measured_at: string; value: number; context: string }
 export interface BP extends Status { id: number; measured_at: string; systolic: number; diastolic: number; pulse?: number | null }
@@ -18,17 +22,21 @@ export interface Streak { current: number; longest: number; checked_in_today: bo
 export interface Energy {
   goal: number; intake: number; burned: number; net: number; difference: number;
   state: "matched" | "over" | "under"; suggestions: string[]; active_min: number; activity_goal_min: number;
+  /** Both goals met, so the day can be confirmed as on plan; goal_missing says what is left. */
+  goal_met: boolean; goal_missing: string[];
 }
 export interface Home {
   status: { level: "green" | "amber" | "red"; text: string };
-  streak: Streak; energy: Energy; clinician: { name: string; phone: string | null } | null;
+  streak: Streak; energy: Energy; clinician: ClinicianInfo | null;
+  /** Doctors covering for colleagues; offered when the patient's own doctor is away. */
+  on_call: ClinicianInfo[];
 }
 export interface ChatMessage { id: number; from_role: "patient" | "clinician"; sender: string; body: string; created_at: string }
-export interface Thread { patient_id: number; name: string; last_body: string | null; last_from_role: ChatMessage["from_role"] | null; last_at: string | null }
+export interface Thread { patient_id: number; name: string; clinician_id: number | null; last_body: string | null; last_from_role: ChatMessage["from_role"] | null; last_at: string | null }
 export interface Notice { tag: string; title: string; body: string; url: string }
 
 export interface PatientRow {
-  id: number; name: string; age: number | null; streak: number; last_check_in: string | null;
+  id: number; name: string; age: number | null; clinician_id: number | null; streak: number; last_check_in: string | null;
   med_adherence_7d: number | null; attention: number;
   latest_bp: { value: string; status: string; severity: number; at: string } | null;
   latest_glucose: { value: number; status: string; severity: number; at: string } | null;

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
+import DoctorPicker from "@/components/DoctorPicker";
 import GoogleSignIn from "@/components/GoogleSignIn";
 import { Eye, EyeOff, Heart, Lock, Mail, Phone, User as UserIcon, Users } from "@/components/icons";
 import { Avatar, Btn, Chips, ErrorNote } from "@/components/ui";
@@ -15,6 +16,11 @@ const DEMO: Record<Role, { email: string; password: string }> = {
   patient: { email: "meena.iyer@care.test", password: "patient123" },
   clinician: { email: "kavitha.menon@riversidehealth.example", password: "clinician123" },
 };
+type Activity = "sedentary" | "light" | "moderate" | "active";
+const ACTIVITY: { value: Activity; label: string }[] = [
+  { value: "sedentary", label: "Mostly sitting" }, { value: "light", label: "Lightly active" },
+  { value: "moderate", label: "Active" }, { value: "active", label: "Very active" },
+];
 const GENDERS = ["Female", "Male", "Non-binary", "Prefer not to say"].map((g) => ({ value: g, label: g }));
 
 const STRENGTH = [
@@ -34,10 +40,11 @@ export default function Login() {
     if (getToken()) api<User>("/auth/me").then(setCurrent).catch(() => {});
   }, []);
 
-  const attempt = async (fn: () => Promise<Session>) => {
+  const attempt = async (fn: () => Promise<Session & { plan?: unknown }>) => {
     setBusy(true);
     try {
       const res = await fn();
+      if (res.plan) { try { sessionStorage.setItem("hc_new_plan", JSON.stringify(res.plan)); } catch {} }
       setToken(res.token);
       sessionStorage.removeItem("hc_welcomed");
       window.location.href = res.user.role === "clinician" ? "/clinician" : "/";
@@ -147,11 +154,16 @@ function SignIn({ role, setRole, busy, error, onSubmit }: {
 
 function Register({ busy, error, onSubmit }: { busy: boolean; error: string | null; onSubmit: (body: Record<string, unknown>) => void }) {
   const [f, setF] = useState({ name: "", email: "", password: "", phone: "", age: "", gender: "" });
+  const [doctor, setDoctor] = useState(0);
+  const [body, setBody] = useState({ height: "", weight: "", activity: "light" as Activity });
+  const h = Number(body.height), w = Number(body.weight);
+  const bmi = h >= 100 && h <= 250 && w >= 25 && w <= 300 ? Math.round((w / (h / 100) ** 2) * 10) / 10 : null;
   const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
   const score = passwordScore(f.password);
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ name: f.name, email: f.email, password: f.password, phone: f.phone || null, age: f.age ? Number(f.age) : null, gender: f.gender || null });
+    onSubmit({ name: f.name, email: f.email, password: f.password, phone: f.phone || null, age: f.age ? Number(f.age) : null, gender: f.gender || null, clinician_id: doctor,
+      height_cm: h, weight_kg: w, activity_level: body.activity });
   };
   return (
     <form onSubmit={submit} className="space-y-4">
@@ -173,14 +185,38 @@ function Register({ busy, error, onSubmit }: { busy: boolean; error: string | nu
       </div>
       <div className="grid grid-cols-[1fr_6rem] gap-3">
         <IconInput icon={<Phone size={16} />} label="Phone (optional)" type="tel" autoComplete="tel" value={f.phone} onChange={set("phone")} placeholder="+1 (732) 555-0100" />
-        <IconInput label="Age" type="number" inputMode="numeric" min={13} max={120} value={f.age} onChange={set("age")} placeholder="25" />
+        <IconInput label="Age" required type="number" inputMode="numeric" min={13} max={120} value={f.age} onChange={set("age")} placeholder="25" />
       </div>
       <div>
         <p className="mb-1.5 text-[0.8rem] font-semibold text-ink-soft">Gender (optional)</p>
         <Chips label="Gender" options={GENDERS} value={f.gender} onChange={(v) => set("gender")(f.gender === v ? "" : v)} />
       </div>
+      <fieldset className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-3">
+        <legend className="px-1 text-[0.8rem] font-semibold text-ink-soft">About your body</legend>
+        <p className="-mt-1 text-xs text-ink-muted">Used for your BMI and to set a starting calorie goal for you.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <IconInput label="Height (cm)" type="number" inputMode="decimal" required min={100} max={250} value={body.height}
+            onChange={(v) => setBody((b) => ({ ...b, height: v }))} placeholder="165" />
+          <IconInput label="Weight (kg)" type="number" inputMode="decimal" required min={25} max={300} value={body.weight}
+            onChange={(v) => setBody((b) => ({ ...b, weight: v }))} placeholder="60" />
+        </div>
+        {bmi !== null && (
+          <p className="animate-slide-in text-xs text-ink-soft" aria-live="polite">
+            BMI <b className="text-ink">{bmi}</b> · {bmi < 18.5 ? "Underweight" : bmi < 25 ? "Healthy range" : bmi < 30 ? "Overweight" : "Obese range"}
+          </p>
+        )}
+        <div>
+          <p className="mb-1.5 text-[0.8rem] font-semibold text-ink-soft">How active are you on a typical day?</p>
+          <Chips label="Activity level" value={body.activity} onChange={(v) => setBody((b) => ({ ...b, activity: v }))} options={ACTIVITY} />
+        </div>
+      </fieldset>
+      <div>
+        <p className="mb-1.5 text-[0.8rem] font-semibold text-ink-soft">Your doctor</p>
+        <DoctorPicker value={doctor} onChange={setDoctor} compact />
+        <p className="mt-1 text-xs text-ink-muted">You can change this any time from your profile.</p>
+      </div>
       <ErrorNote error={error} />
-      <Btn type="submit" size="lg" disabled={busy || f.password.length < 8 || !f.name.trim() || !f.email} className="w-full">
+      <Btn type="submit" size="lg" disabled={busy || f.password.length < 8 || !f.name.trim() || !f.email || bmi === null} className="w-full">
         {busy ? "Creating account…" : "Create patient account"}
       </Btn>
     </form>

@@ -1,10 +1,12 @@
 import secrets
+from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import google_auth, models as m, schemas as s
+from .. import calorie_plan, calories as cal, care_team, google_auth, models as m, schemas as s
 from ..data import load
 from ..database import get_db
 from ..security import current_user, hash_password, make_token, verify_password
@@ -29,15 +31,10 @@ def _session(user: m.User, role) -> dict:
 
 
 
-def _new_patient(db: Session, email: str, name: str, password: str, **profile) -> m.User:
-    """Create a patient under the clinician with the fewest patients, with a few starter habits."""
-    counts = {c.id: 0 for c in db.scalars(select(m.User).where(m.User.role == "clinician"))}
-    for cid, n in db.execute(select(m.User.clinician_id, func.count()).where(m.User.role == "patient")
-                             .group_by(m.User.clinician_id)):
-        if cid in counts:
-            counts[cid] = n
+def _new_patient(db: Session, email: str, name: str, password: str, clinician_id: Optional[int] = None, **profile) -> m.User:
+    """Create a patient under the doctor they chose (or any available one), with a few starter habits."""
     user = m.User(email=email, name=name, role="patient", password_hash=hash_password(password),
-                  clinician_id=min(counts, key=counts.get) if counts else None, **profile)
+                  clinician_id=care_team.resolve_choice(db, clinician_id), **profile)
     db.add(user)
     db.flush()
     db.add_all(m.Habit(user_id=user.id, **h) for h in load("starter_habits"))
@@ -45,15 +42,29 @@ def _new_patient(db: Session, email: str, name: str, password: str, **profile) -
     return user
 
 
+@router.get("/clinicians", response_model=list[s.ClinicianPublic])
+def list_clinicians(db: Session = Depends(get_db)):
+    """The clinic's doctors, for choosing one at sign-up or later (no contact details)."""
+    return [s.ClinicianPublic(id=c.id, name=c.name, gender=c.gender, bio=c.bio, available=care_team.is_available(c),
+                              on_call=care_team.is_on_call(c)) for c in care_team.clinicians(db)]
+
+
 @router.post("/register", status_code=201)
 def register(body: s.RegisterIn, db: Session = Depends(get_db)):
-    """Self sign-up is for patients only; clinician accounts are created by the clinic."""
+    """Self sign-up is for patients only; clinician accounts are created by the clinic.
+    Height and weight give the first BMI reading and a suggested calorie goal (see app/calorie_plan.py)."""
     email = body.email.strip().lower()
     if db.scalars(select(m.User).where(m.User.email == email)).first():
         raise HTTPException(409, "An account with this email already exists. Try signing in.")
-    profile = body.model_dump(exclude={"email", "password", "name"}, exclude_none=True)
+    profile = body.model_dump(exclude={"email", "password", "name", "weight_kg", "activity_level"}, exclude_none=True)
     profile = {k: (v.strip() or None) if isinstance(v, str) else v for k, v in profile.items()}
-    return _session(_new_patient(db, email, body.name.strip(), body.password, **profile), "patient")
+    plan = calorie_plan.suggest(body.age or 35, body.gender, body.height_cm, body.weight_kg, body.activity_level)
+    user = _new_patient(db, email, body.name.strip(), body.password, calorie_goal=plan["calorie_goal"], **profile)
+    bmi = cal.bmi_value(body.height_cm, body.weight_kg)
+    db.add(m.BMIRecord(user_id=user.id, measured_at=datetime.now(), height_cm=body.height_cm, weight_kg=body.weight_kg,
+                       bmi=bmi, category=cal.bmi_category(bmi)))
+    db.commit()
+    return {**_session(user, "patient"), "plan": plan}
 
 
 @router.get("/google-config")
@@ -87,8 +98,12 @@ def me(user: m.User = Depends(current_user)):
 @router.patch("/me", response_model=s.UserOut)
 def update_me(body: s.SettingsIn, user: m.User = Depends(current_user), db: Session = Depends(get_db)):
     changes = body.model_dump(exclude_unset=True, exclude_none=True)
-    if user.role != "patient" and set(changes) - s.PROFILE_FIELDS:
-        raise HTTPException(403, "Only patients have goals and reminders")
+    allowed = s.PROFILE_FIELDS | (s.PATIENT_FIELDS if user.role == "patient" else s.CLINICIAN_FIELDS)
+    if set(changes) - allowed:
+        raise HTTPException(403, "Only patients have goals and reminders" if user.role != "patient"
+                            else "Only clinicians set availability")
+    if "clinician_id" in changes:
+        changes["clinician_id"] = care_team.resolve_choice(db, changes["clinician_id"])
     for k, v in changes.items():
         # An emptied text box clears the field; the name is required.
         setattr(user, k, (v.strip() or None) if isinstance(v, str) and k != "name" else v)

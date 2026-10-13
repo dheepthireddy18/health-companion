@@ -28,6 +28,11 @@ class RegisterIn(BaseModel):
     phone: Optional[str] = Field(None, max_length=30)
     age: Optional[int] = Field(None, ge=13, le=120)
     gender: Optional[str] = Field(None, max_length=30)
+    clinician_id: Optional[int] = Field(None, ge=0)  # 0 or missing: any available doctor
+    # for the first BMI reading and the suggested calorie goal
+    height_cm: float = Field(ge=100, le=250)
+    weight_kg: float = Field(ge=25, le=300)
+    activity_level: Literal["sedentary", "light", "moderate", "active"] = "light"
 
 
 class GoogleLoginIn(BaseModel):
@@ -53,10 +58,25 @@ class UserOut(ORM):
     emergency_contact_name: Optional[str] = None
     emergency_contact_phone: Optional[str] = None
     bio: Optional[str] = None
+    clinician_id: Optional[int] = None
+    available: Optional[bool] = None
+    on_call: Optional[bool] = None
 
 
 PROFILE_FIELDS = {"name", "phone", "age", "gender", "height_cm", "blood_type", "allergies",
                   "emergency_contact_name", "emergency_contact_phone", "bio"}
+PATIENT_FIELDS = {"emergency_number", "calorie_goal", "activity_goal_min", "notifications_enabled", "clinician_id"}
+CLINICIAN_FIELDS = {"available", "on_call"}
+
+
+class ClinicianPublic(BaseModel):
+    """What anyone, including someone registering, may see about a doctor."""
+    id: int
+    name: str
+    gender: Optional[str] = None
+    bio: Optional[str] = None
+    available: bool
+    on_call: bool
 
 
 class SettingsIn(BaseModel):
@@ -71,16 +91,24 @@ class SettingsIn(BaseModel):
     emergency_contact_name: Optional[str] = Field(None, max_length=80)
     emergency_contact_phone: Optional[str] = Field(None, max_length=30)
     bio: Optional[str] = Field(None, max_length=500)
-    # patient-only
+    # clinician-only
+    available: Optional[bool] = None
+    on_call: Optional[bool] = None
+    # patient-only (clinician_id 0 = any available doctor)
+    clinician_id: Optional[int] = Field(None, ge=0)
     emergency_number: Optional[str] = Field(None, max_length=20)
     calorie_goal: Optional[int] = Field(None, ge=800, le=4500)
     activity_goal_min: Optional[int] = Field(None, ge=0, le=300)
     notifications_enabled: Optional[bool] = None
 
 
-class ClinicianInfo(ORM):
+class ClinicianInfo(BaseModel):
+    id: int
     name: str
     phone: Optional[str] = None
+    bio: Optional[str] = None
+    available: bool = True
+    on_call: bool = False
 
 
 # ---------- vitals ----------
@@ -196,6 +224,7 @@ class MessageIn(BaseModel):
 class ThreadOut(BaseModel):
     patient_id: int
     name: str
+    clinician_id: Optional[int] = None
     last_body: Optional[str] = None
     last_from_role: Optional[str] = None
     last_at: Optional[datetime] = None
