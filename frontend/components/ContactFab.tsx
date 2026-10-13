@@ -14,6 +14,8 @@ import type { ChatMessage, Home } from "@/lib/types";
  * fans out two options: text, which opens a chat panel, and call. Messages are checked in the background so a
  * message from anyone on the care team shows as a badge (with a sound) even while the panel is closed.
  */
+interface Contact { id: number; name: string; tag: string }
+
 export default function ContactFab() {
   const { user } = useAuth();
   const toast = useToast();
@@ -27,34 +29,51 @@ export default function ContactFab() {
   const cover = away ? (home?.on_call ?? []) : [];
   const first = clinician?.name ?? "my clinician";
 
-  // Read state: the id of the newest care-team message this person has seen, per account on this device.
-  const seenKey = `hc_seen_msg_${user.id}`;
-  const [seen, setSeen] = useState(0);
-  useEffect(() => { try { setSeen(Number(localStorage.getItem(seenKey)) || 0); } catch {} }, [seenKey]);
-  const incoming = (messages.data ?? []).filter((m) => m.from_role === "clinician");
+  // Conversations are private, one per doctor: the patient's own doctor, on-call cover while they're away,
+  // and any doctor who has written to them.
+  const all = messages.data ?? [];
+  const contacts: Contact[] = [];
+  const addContact = (c: Contact) => { if (!contacts.some((x) => x.id === c.id)) contacts.push(c); };
+  if (clinician) addContact({ id: clinician.id, name: clinician.name, tag: clinician.available ? "Your doctor" : "Your doctor · away" });
+  cover.forEach((c) => addContact({ id: c.id, name: c.name, tag: "On call" }));
+  all.forEach((m) => { if (m.from_role === "clinician" && m.clinician_id) addContact({ id: m.clinician_id, name: m.sender, tag: "" }); });
+
+  // Read state per conversation: the newest message id seen from each doctor, per account on this device.
+  const seenKey = `hc_seen_conv_${user.id}`;
+  const [seen, setSeen] = useState<Record<number, number>>({});
+  useEffect(() => { try { setSeen(JSON.parse(localStorage.getItem(seenKey) || "{}")); } catch {} }, [seenKey]);
+  const incoming = all.filter((m) => m.from_role === "clinician");
   const newest = incoming.length ? incoming[incoming.length - 1] : null;
-  const unread = incoming.filter((m) => m.id > seen).length;
+  const unreadFor = (cid: number) => incoming.filter((m) => m.clinician_id === cid && m.id > (seen[cid] ?? 0)).length;
+  const unread = contacts.reduce((n, c) => n + unreadFor(c.id), 0);
+  const [active, setActive] = useState<number | null>(null);
+  const defaultConv = contacts.find((c) => unreadFor(c.id) > 0)?.id ?? (away ? cover[0]?.id : undefined) ?? contacts[0]?.id ?? null;
+  const current = active ?? defaultConv;
+  const openChat = (cid: number | null = null) => { setActive(cid ?? defaultConv); setChat(true); setOpen(false); };
 
   useEffect(() => { const id = setInterval(messages.reload, chat ? 8000 : 20000); return () => clearInterval(id); }, [messages.reload, chat]);
 
-  // Opening the chat marks everything read.
+  // Viewing a conversation marks it read.
   useEffect(() => {
-    if (!chat || !newest || newest.id <= seen) return;
-    setSeen(newest.id);
-    try { localStorage.setItem(seenKey, String(newest.id)); } catch {}
-  }, [chat, newest, seen, seenKey]);
+    if (!chat || current === null) return;
+    const last = incoming.filter((m) => m.clinician_id === current).pop();
+    if (!last || last.id <= (seen[current] ?? 0)) return;
+    const next = { ...seen, [current]: last.id };
+    setSeen(next);
+    try { localStorage.setItem(seenKey, JSON.stringify(next)); } catch {}
+  }, [chat, current, incoming, seen, seenKey]);
 
   // Announce messages that arrive while the app is open (the backlog on first load only gets the badge).
   const lastNewest = useRef<number | null>(null);
   useEffect(() => {
     if (messages.data === null) return;
     const id = newest?.id ?? 0;
-    if (lastNewest.current !== null && id > lastNewest.current && !chat && newest) {
+    if (lastNewest.current !== null && id > lastNewest.current && newest && !(chat && current === newest.clinician_id)) {
       sfx.chime();
       toast(`New message from ${newest.sender}`);
     }
     lastNewest.current = id;
-  }, [messages.data, newest, chat, toast]);
+  }, [messages.data, newest, chat, current, toast]);
 
   const show = () => { clearTimeout(closeTimer.current); setOpen(true); };
   const hide = () => { closeTimer.current = setTimeout(() => setOpen(false), 180); };
@@ -69,8 +88,10 @@ export default function ContactFab() {
   return (
     <>
       {chat && (
-        <ChatPanel name={first} away={away} messages={messages.data} error={messages.error} onClose={() => setChat(false)}
-          onSend={async (body) => { await post("/messages", { body }); await messages.reload(); }} />
+        <ChatPanel contacts={contacts} current={current} onPick={setActive} unreadFor={unreadFor}
+          messages={messages.data && messages.data.filter((m) => m.clinician_id === current)} error={messages.error}
+          onClose={() => setChat(false)}
+          onSend={async (body) => { await post("/messages", { body, clinician_id: current }); await messages.reload(); }} />
       )}
       <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3 sm:bottom-7 sm:right-7"
         onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) hide(); }}>
@@ -82,12 +103,12 @@ export default function ContactFab() {
               </p>
             )}
             <button role="menuitem" className={`${option} animate-pop-in`} style={{ animationDelay: "60ms" }}
-              onClick={() => { setChat(true); setOpen(false); }}>
+              onClick={() => openChat()}>
               <span className="relative grid h-9 w-9 place-items-center rounded-full bg-brand-50 text-brand-700">
                 <Chat size={18} />
                 {unread > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />}
               </span>
-              {unread > 0 ? `${unread} new message${unread === 1 ? "" : "s"}` : away ? "Text the care team" : `Text ${first}`}
+              {unread > 0 ? `${unread} new message${unread === 1 ? "" : "s"}` : away ? (cover.length ? "Message the on-call doctor" : `Message ${first}`) : `Text ${first}`}
             </button>
             {away ? (
               cover.length ? cover.map((c) => (
@@ -133,22 +154,46 @@ export default function ContactFab() {
   );
 }
 
-function ChatPanel({ name, away, messages, error, onSend, onClose }: {
-  name: string; away: boolean; messages: ChatMessage[] | null; error: string | null; onSend: (body: string) => Promise<void>; onClose: () => void;
+function ChatPanel({ contacts, current, onPick, unreadFor, messages, error, onSend, onClose }: {
+  contacts: Contact[]; current: number | null; onPick: (id: number) => void; unreadFor: (id: number) => number;
+  messages: ChatMessage[] | null; error: string | null; onSend: (body: string) => Promise<void>; onClose: () => void;
 }) {
+  const who = contacts.find((c) => c.id === current);
   return (
-    <div role="dialog" aria-label="Chat with your care team"
-      className="fixed bottom-24 right-4 z-50 flex h-[min(560px,calc(100vh-8rem))] w-[calc(100vw-2rem)] max-w-sm animate-slide-in flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lift sm:right-7">
-      <header className="flex items-center gap-3 bg-gradient-to-r from-brand-600 to-teal-600 px-4 py-3 text-white">
-        <Avatar name={name} size={38} className="ring-2 ring-white/40" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-bold">Your care team</p>
-          <p className="truncate text-xs text-white/80">{away ? `${name} is away · on-call doctors will reply` : `${name} and colleagues · replies during clinic hours`}</p>
+    <div role="dialog" aria-label={who ? `Chat with ${who.name}` : "Chat"}
+      className="fixed bottom-24 right-4 z-50 flex h-[min(580px,calc(100vh-8rem))] w-[calc(100vw-2rem)] max-w-sm animate-slide-in flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lift sm:right-7">
+      <header className="bg-gradient-to-r from-brand-600 to-teal-600 px-4 py-3 text-white">
+        <div className="flex items-center gap-3">
+          <Avatar name={(who?.name ?? "Care team").replace(/^Dr\.?\s*/, "")} size={38} className="ring-2 ring-white/40" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-bold">{who?.name ?? "No doctor yet"}</p>
+            <p className="truncate text-xs text-white/80">{who?.tag ? `${who.tag} · ` : ""}Private conversation</p>
+          </div>
+          <button onClick={onClose} aria-label="Close chat" className="grid h-9 w-9 place-items-center rounded-full hover:bg-white/15"><Close size={18} /></button>
         </div>
-        <button onClick={onClose} aria-label="Close chat" className="grid h-9 w-9 place-items-center rounded-full hover:bg-white/15"><Close size={18} /></button>
+        {contacts.length > 1 && (
+          <div role="tablist" aria-label="Conversations" className="scrollbar-thin -mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
+            {contacts.map((c) => {
+              const on = c.id === current, n = unreadFor(c.id);
+              return (
+                <button key={c.id} role="tab" aria-selected={on} onClick={() => onPick(c.id)}
+                  className={`relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition ${
+                    on ? "bg-white text-brand-800" : "bg-white/15 text-white hover:bg-white/25"}`}>
+                  {c.name.replace(/^Dr\.?\s*/, "Dr. ").split(" ").slice(0, 2).join(" ")}
+                  {c.tag === "On call" && <span className={`rounded px-1 text-[0.6rem] ${on ? "bg-violet-100 text-violet-700" : "bg-white/20"}`}>on call</span>}
+                  {n > 0 && <span className="grid h-4 min-w-[1rem] place-items-center rounded-full bg-rose-500 px-1 text-[0.6rem] text-white">{n}</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </header>
-      <ChatThread messages={messages} me="patient" error={error} onSend={onSend}
-        emptyText={`Say hello to ${name}. Messages are not monitored for emergencies.`} />
+      {current === null ? (
+        <p className="p-6 text-center text-sm text-ink-muted">Choose a doctor in your profile to start a conversation.</p>
+      ) : (
+        <ChatThread key={current} messages={messages} me="patient" error={error} onSend={onSend}
+          emptyText={`Say hello to ${who?.name ?? "your doctor"}. Only you and them can see this conversation. Not monitored for emergencies.`} />
+      )}
     </div>
   );
 }

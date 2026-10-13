@@ -165,10 +165,11 @@ class CheckIn(Base):
 
 
 class Message(Base):
-    """Chat between a patient and their care team; patient_id identifies the thread."""
+    """Private chat between one patient and one clinician; (patient_id, clinician_id) identifies the thread."""
     __tablename__ = "messages"
     id: Mapped[int] = mapped_column(primary_key=True)
     patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    clinician_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     sender_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     body: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

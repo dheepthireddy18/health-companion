@@ -39,7 +39,7 @@ export default function PatientDetail() {
       {r && (
         <>
           <Card delay={40}>
-            <SummaryBox patientId={id} actions={<Btn size="sm" variant="secondary" onClick={() => openChat(id)}><Chat size={15} /> Message</Btn>}>
+            <SummaryBox patientId={id} actions={<Btn size="sm" variant="secondary" onClick={() => openChat(id, r.patient.name)}><Chat size={15} /> Message</Btn>}>
               <div className="flex items-center gap-4">
                 <Avatar name={r.patient.name} size={56} />
                 <div>

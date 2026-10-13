@@ -8,13 +8,14 @@ import { Avatar, Skeleton } from "@/components/ui";
 import { ago, post, useFetch } from "@/lib/api";
 import type { ChatMessage, Thread } from "@/lib/types";
 
-const DockCtx = createContext<(patientId: number) => void>(() => {});
+const DockCtx = createContext<(patientId: number, name?: string) => void>(() => {});
 /** Open the dock on one patient's conversation, e.g. from a records page. */
 export const useOpenChat = () => useContext(DockCtx);
 
 /**
  * Clinicians look after many patients, so chat lives in its own dock: a chat button in the bottom-right corner
- * opens a panel listing every conversation (unanswered first by recency), and a patient opens their thread.
+ * opens a panel listing this clinician's own conversations and patients (newest first). Conversations are private:
+ * a colleague's chat with the same patient never appears here.
  */
 export default function ClinicianChatDock({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -29,7 +30,11 @@ export default function ClinicianChatDock({ children }: { children: ReactNode })
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const openWith = useCallback((id: number) => { setActive(id); setOpen(true); }, []);
+  const [names, setNames] = useState<Record<number, string>>({});
+  const openWith = useCallback((id: number, name?: string) => {
+    if (name) setNames((n) => ({ ...n, [id]: name }));
+    setActive(id); setOpen(true);
+  }, []);
   const current = threads.data?.find((t) => t.patient_id === active);
 
   return (
@@ -39,7 +44,7 @@ export default function ClinicianChatDock({ children }: { children: ReactNode })
         <div role="dialog" aria-label="Patient messages"
           className="fixed bottom-24 right-4 z-50 flex h-[min(620px,calc(100vh-8rem))] w-[calc(100vw-2rem)] max-w-[400px] animate-slide-in flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lift sm:right-7">
           {active !== null ? (
-            <ThreadView key={active} id={active} name={current?.name ?? "Patient"} onBack={() => { setActive(null); threads.reload(); }}
+            <ThreadView key={active} id={active} name={current?.name ?? (active !== null ? names[active] : undefined) ?? "Patient"} onBack={() => { setActive(null); threads.reload(); }}
               onClose={() => setOpen(false)} onSent={threads.reload} />
           ) : (
             <ThreadList threads={threads.data} onPick={setActive} onClose={() => setOpen(false)} waiting={waiting} />
@@ -139,7 +144,7 @@ function ThreadView({ id, name, onBack, onClose, onSent }: {
         <button onClick={onClose} aria-label="Collapse messages" className="grid h-9 w-9 place-items-center rounded-full text-ink-muted hover:bg-slate-100"><Minimize size={18} /></button>
       </header>
       <ChatThread messages={chat.data} me="clinician" error={chat.error} placeholder={`Reply to ${name.split(" ")[0]}…`}
-        emptyText="No messages yet. Start the conversation."
+        emptyText={`No messages yet. Only you and ${name.split(" ")[0]} can see this conversation.`}
         onSend={async (body) => { await post(`/clinician/patients/${id}/messages`, { body }); await chat.reload(); onSent(); }} />
     </>
   );

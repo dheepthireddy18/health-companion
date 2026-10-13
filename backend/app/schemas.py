@@ -219,6 +219,7 @@ class HabitCount(BaseModel):
 
 class MessageIn(BaseModel):
     body: str = Field(min_length=1, max_length=1000)
+    clinician_id: Optional[int] = None  # patients: which doctor to write to (default: their own doctor)
 
 
 class ThreadOut(BaseModel):
@@ -232,6 +233,7 @@ class ThreadOut(BaseModel):
 
 class MessageOut(BaseModel):
     id: int
+    clinician_id: Optional[int] = None  # the doctor this conversation is with
     from_role: str
     sender: str
     body: str

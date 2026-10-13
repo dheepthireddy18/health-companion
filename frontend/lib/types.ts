@@ -31,7 +31,7 @@ export interface Home {
   /** Doctors covering for colleagues; offered when the patient's own doctor is away. */
   on_call: ClinicianInfo[];
 }
-export interface ChatMessage { id: number; from_role: "patient" | "clinician"; sender: string; body: string; created_at: string }
+export interface ChatMessage { id: number; clinician_id: number | null; from_role: "patient" | "clinician"; sender: string; body: string; created_at: string }
 export interface Thread { patient_id: number; name: string; clinician_id: number | null; last_body: string | null; last_from_role: ChatMessage["from_role"] | null; last_at: string | null }
 export interface Notice { tag: string; title: string; body: string; url: string }
 

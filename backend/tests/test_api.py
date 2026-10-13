@@ -139,7 +139,7 @@ def test_cannot_log_other_patients_habit(client, patient, other_patient):
 # ---------- chat ----------
 def test_chat_between_patient_and_clinician(client, patient, clinician):
     pid = client.get("/api/auth/me", headers=patient).json()["id"]
-    client.post("/api/messages", json={"body": "My feet feel numb"}, headers=patient)
+    client.post("/api/messages", json={"body": "My feet feel numb"}, headers=patient)  # to their own doctor
     client.post(f"/api/clinician/patients/{pid}/messages", json={"body": "Please come in tomorrow"}, headers=clinician)
     thread = client.get("/api/messages", headers=patient).json()
     assert [t["from_role"] for t in thread[-2:]] == ["patient", "clinician"]
@@ -148,6 +148,35 @@ def test_chat_between_patient_and_clinician(client, patient, clinician):
     assert first["patient_id"] == pid and first["last_body"] == "Please come in tomorrow"
     assert first["last_from_role"] == "clinician"
     assert client.get("/api/clinician/threads", headers=patient).status_code == 403
+
+
+def test_conversations_are_private_to_each_clinician(client, patient, clinician):
+    """Meena's doctor is Dr. Menon; Dr. Shetty writing to her starts a separate conversation neither can read."""
+    shetty = login(client, "arjun.shetty@riversidehealth.example", "clinician123")
+    neil = login(client, "neil.dsouza@riversidehealth.example", "clinician123")
+    me = client.get("/api/auth/me", headers=patient).json()
+    shetty_id = client.get("/api/auth/me", headers=shetty).json()["id"]
+    neil_id = client.get("/api/auth/me", headers=neil).json()["id"]
+    pid = me["id"]
+    client.post(f"/api/clinician/patients/{pid}/messages", json={"body": "Shetty here, quick check-in"}, headers=shetty)
+    client.post(f"/api/clinician/patients/{pid}/messages", json={"body": "Menon: see you Friday"}, headers=clinician)
+
+    shetty_view = [x["body"] for x in client.get(f"/api/clinician/patients/{pid}/messages", headers=shetty).json()]
+    menon_view = [x["body"] for x in client.get(f"/api/clinician/patients/{pid}/messages", headers=clinician).json()]
+    assert "Shetty here, quick check-in" in shetty_view and "Menon: see you Friday" not in shetty_view
+    assert "Menon: see you Friday" in menon_view and "Shetty here, quick check-in" not in menon_view
+    assert all(t["patient_id"] != pid or t["last_body"] == "Shetty here, quick check-in"
+               for t in client.get("/api/clinician/threads", headers=shetty).json())
+
+    # the patient sees both, labelled by clinician, and can reply to Dr. Shetty privately
+    mine = client.get("/api/messages", headers=patient).json()
+    assert {x["clinician_id"] for x in mine if x["body"] in ("Shetty here, quick check-in", "Menon: see you Friday")} == {shetty_id, me["clinician_id"]}
+    client.post("/api/messages", json={"body": "Thanks Dr. Shetty", "clinician_id": shetty_id}, headers=patient)
+    assert "Thanks Dr. Shetty" in [x["body"] for x in client.get(f"/api/clinician/patients/{pid}/messages", headers=shetty).json()]
+    assert "Thanks Dr. Shetty" not in [x["body"] for x in client.get(f"/api/clinician/patients/{pid}/messages", headers=clinician).json()]
+    # but cannot write to a doctor with no connection to them (not theirs, not on call, never wrote)
+    assert client.post("/api/messages", json={"body": "hi", "clinician_id": neil_id}, headers=patient).status_code == 403
+    assert not [t for t in client.get("/api/clinician/threads", headers=neil).json() if t["patient_id"] == pid]
 
 
 # ---------- clinician ----------
@@ -198,9 +227,25 @@ def test_food_preview_does_not_save(client, patient):
 
 
 def test_any_clinician_message_reaches_the_patient(client, other_patient):
-    """Ravi's own clinician is not this one, but the patient still sees the message in their thread."""
+    """Ravi's own clinician is not this one, but the patient still sees the message, in its own conversation."""
     other_doc = login(client, "arjun.shetty@riversidehealth.example", "clinician123")
     me = client.get("/api/auth/me", headers=other_patient).json()
     sent = client.post(f"/api/clinician/patients/{me['id']}/messages", json={"body": "Checking in from the clinic"}, headers=other_doc).json()
     thread = client.get("/api/messages", headers=other_patient).json()
     assert thread[-1]["id"] == sent["id"] and thread[-1]["sender"] == "Dr. Arjun Shetty"
+    assert thread[-1]["clinician_id"] == client.get("/api/auth/me", headers=other_doc).json()["id"]
+
+
+def test_backfill_assigns_old_messages_to_a_conversation(client, other_patient):
+    from app import models as mm
+    from app.database import SessionLocal
+    from app.routers.messages import backfill
+    pid = client.get("/api/auth/me", headers=other_patient).json()["id"]
+    with SessionLocal() as db:
+        doc = db.get(mm.User, db.get(mm.User, pid).clinician_id)
+        a = mm.Message(patient_id=pid, sender_id=doc.id, body="legacy from doctor")
+        b = mm.Message(patient_id=pid, sender_id=pid, body="legacy reply")
+        db.add_all([a, b]); db.commit()
+        backfill(db)
+        db.refresh(a); db.refresh(b)
+        assert a.clinician_id == doc.id and b.clinician_id == doc.id

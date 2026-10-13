@@ -65,7 +65,7 @@ export default function PatientList() {
             <article key={p.id} style={{ animationDelay: `${200 + gi * 150 + i * 50}ms` }}
               className={`animate-fade-up rounded-2xl border bg-white p-5 shadow-card transition hover:shadow-lift ${p.attention >= 3 ? "border-rose-200" : p.attention === 2 ? "border-orange-200" : "border-slate-200/80"}`}>
               <SummaryBox patientId={p.id}
-                actions={<Btn size="sm" variant="secondary" onClick={() => openChat(p.id)} aria-label={`Message ${p.name}`}><Chat size={15} /> <span className="hidden sm:inline">Message</span></Btn>}>
+                actions={<Btn size="sm" variant="secondary" onClick={() => openChat(p.id, p.name)} aria-label={`Message ${p.name}`}><Chat size={15} /> <span className="hidden sm:inline">Message</span></Btn>}>
                 <Link href={`/clinician/patients/${p.id}`} className="group flex items-center gap-3">
                   <Avatar name={p.name} size={44} />
                   <span>

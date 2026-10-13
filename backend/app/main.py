@@ -13,6 +13,8 @@ from .seed import seed_demo_data
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(engine)
     add_missing_columns()
+    with SessionLocal() as db:
+        messages.backfill(db)  # give pre-existing messages their conversation's clinician
     if os.getenv("SEED_DEMO", "1") == "1":
         with SessionLocal() as db:
             seed_demo_data(db)  # no-op once users exist
