@@ -90,6 +90,18 @@ def summary(patient_id: int, days: int = Query(..., description="7, 30 or 90"), 
     return {**result, "days": days, "patient": p.name, "stats": stats}
 
 
+@router.get("/threads", response_model=list[s.ThreadOut])
+def threads(db: Session = Depends(get_db)):
+    """Every patient with their latest message, most recent conversation first, for the chat dock."""
+    out = []
+    for p in db.scalars(select(m.User).where(m.User.role == "patient").order_by(m.User.name)):
+        last = db.execute(select(m.Message, m.User.role).join(m.User, m.User.id == m.Message.sender_id)
+                          .where(m.Message.patient_id == p.id).order_by(m.Message.id.desc()).limit(1)).first()
+        out.append(s.ThreadOut(patient_id=p.id, name=p.name, last_body=last[0].body if last else None,
+                               last_from_role=last[1] if last else None, last_at=last[0].created_at if last else None))
+    return sorted(out, key=lambda t: t.last_at or datetime.min, reverse=True)
+
+
 @router.get("/patients/{patient_id}/messages", response_model=list[s.MessageOut])
 def get_thread(patient_id: int, db: Session = Depends(get_db)):
     return messages.thread(db, _patient(db, patient_id).id)

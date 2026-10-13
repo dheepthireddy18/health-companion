@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .database import Base, SessionLocal, engine
+from .database import Base, SessionLocal, add_missing_columns, engine
 from .routers import auth, clinician, messages, notifications, patient
 from .seed import seed_demo_data
 
@@ -12,6 +12,7 @@ from .seed import seed_demo_data
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(engine)
+    add_missing_columns()
     if os.getenv("SEED_DEMO", "1") == "1":
         with SessionLocal() as db:
             seed_demo_data(db)  # no-op once users exist

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Drink water",
+    "target": 8,
+    "unit": "glasses"
+  },
+  {
+    "name": "Walk or move for 20 minutes",
+    "target": 1,
+    "unit": "session"
+  },
+  {
+    "name": "Sleep 7+ hours",
+    "target": 1,
+    "unit": "night"
+  }
+]

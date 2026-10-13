@@ -25,14 +25,14 @@ def login(client, email, password):
 
 @pytest.fixture(scope="session")
 def patient(client):
-    return login(client, "meena@example.com", "patient123")
+    return login(client, "meena.iyer@care.test", "patient123")
 
 
 @pytest.fixture(scope="session")
 def other_patient(client):
-    return login(client, "ravi@example.com", "patient123")
+    return login(client, "ravi.kumar@care.test", "patient123")
 
 
 @pytest.fixture(scope="session")
 def clinician(client):
-    return login(client, "dr.nair@clinic.test", "clinician123")
+    return login(client, "kavitha.menon@riversidehealth.example", "clinician123")

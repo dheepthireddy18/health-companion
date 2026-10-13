@@ -1,0 +1,449 @@
+{
+  "about": "Demo clinic used by app/seed.py. Phone numbers use the 555-0100-0199 range reserved for fiction and emails use reserved domains (.test, .example), so nothing can reach a real person. story: bp_start is (systolic, diastolic), bp_drift_90d is the systolic rise over 90 days, rates are daily probabilities, checkin_streak is the unbroken run ending today.",
+  "clinicians": [
+    {
+      "name": "Dr. Kavitha Menon",
+      "email": "kavitha.menon@riversidehealth.example",
+      "phone": "+1 (732) 555-0110",
+      "gender": "Female",
+      "bio": "Endocrinologist · Diabetes and thyroid care · 14 years in practice",
+      "password": "clinician123"
+    },
+    {
+      "name": "Dr. Arjun Shetty",
+      "email": "arjun.shetty@riversidehealth.example",
+      "phone": "+1 (732) 555-0111",
+      "gender": "Male",
+      "bio": "Internal medicine · Hypertension and heart health · 9 years in practice",
+      "password": "clinician123"
+    }
+  ],
+  "patients": [
+    {
+      "name": "Asha Rao",
+      "email": "asha.rao@care.test",
+      "password": "patient123",
+      "clinician": "arjun.shetty@riversidehealth.example",
+      "phone": "+1 (732) 555-0120",
+      "age": 62,
+      "gender": "Female",
+      "height_cm": 160,
+      "weight_kg": 70,
+      "blood_type": "B+",
+      "allergies": "Sulfa drugs",
+      "emergency_contact": {
+        "name": "Vikram Rao (husband)",
+        "phone": "+1 (732) 555-0130"
+      },
+      "calorie_goal": 1600,
+      "activity_goal_min": 30,
+      "medicines": [
+        {
+          "name": "Amlodipine",
+          "dose": "5 mg",
+          "times": "08:00"
+        },
+        {
+          "name": "Telmisartan",
+          "dose": "40 mg",
+          "times": "20:00"
+        }
+      ],
+      "habits": [
+        {
+          "name": "Drink water",
+          "target": 8,
+          "unit": "glasses"
+        },
+        {
+          "name": "Evening walk",
+          "target": 1,
+          "unit": "walk"
+        },
+        {
+          "name": "No added salt at the table",
+          "target": 1,
+          "unit": "day"
+        },
+        {
+          "name": "Check BP before breakfast",
+          "target": 1,
+          "unit": "reading"
+        }
+      ],
+      "story": {
+        "bp_start": [
+          128,
+          82
+        ],
+        "bp_drift_90d": 18,
+        "fasting_sugar": 112,
+        "med_adherence": 0.8,
+        "activity_rate": 0.55,
+        "indulgent_meal_rate": 0.15,
+        "checkin_streak": 10
+      }
+    },
+    {
+      "name": "Ravi Kumar",
+      "email": "ravi.kumar@care.test",
+      "password": "patient123",
+      "clinician": "kavitha.menon@riversidehealth.example",
+      "phone": "+1 (732) 555-0121",
+      "age": 55,
+      "gender": "Male",
+      "height_cm": 172,
+      "weight_kg": 88,
+      "blood_type": "O+",
+      "allergies": null,
+      "emergency_contact": {
+        "name": "Lakshmi Kumar (wife)",
+        "phone": "+1 (732) 555-0131"
+      },
+      "calorie_goal": 1900,
+      "activity_goal_min": 40,
+      "medicines": [
+        {
+          "name": "Metformin",
+          "dose": "1000 mg",
+          "times": "08:00,20:00"
+        },
+        {
+          "name": "Glimepiride",
+          "dose": "2 mg",
+          "times": "08:00"
+        }
+      ],
+      "habits": [
+        {
+          "name": "Drink water",
+          "target": 8,
+          "unit": "glasses"
+        },
+        {
+          "name": "Walk 20 minutes after dinner",
+          "target": 1,
+          "unit": "walk"
+        },
+        {
+          "name": "No sugary drinks",
+          "target": 1,
+          "unit": "day"
+        },
+        {
+          "name": "Check sugar before dinner",
+          "target": 1,
+          "unit": "reading"
+        }
+      ],
+      "story": {
+        "bp_start": [
+          132,
+          84
+        ],
+        "bp_drift_90d": 2,
+        "fasting_sugar": 168,
+        "med_adherence": 0.65,
+        "activity_rate": 0.15,
+        "indulgent_meal_rate": 0.55,
+        "checkin_streak": 3
+      }
+    },
+    {
+      "name": "Meena Iyer",
+      "email": "meena.iyer@care.test",
+      "password": "patient123",
+      "clinician": "kavitha.menon@riversidehealth.example",
+      "phone": "+1 (732) 555-0122",
+      "age": 48,
+      "gender": "Female",
+      "height_cm": 158,
+      "weight_kg": 62,
+      "blood_type": "A+",
+      "allergies": "Penicillin",
+      "emergency_contact": {
+        "name": "Karthik Iyer (brother)",
+        "phone": "+1 (732) 555-0132"
+      },
+      "calorie_goal": 1500,
+      "activity_goal_min": 45,
+      "medicines": [
+        {
+          "name": "Metformin",
+          "dose": "500 mg",
+          "times": "09:00"
+        },
+        {
+          "name": "Atorvastatin",
+          "dose": "10 mg",
+          "times": "20:00"
+        }
+      ],
+      "habits": [
+        {
+          "name": "Drink water",
+          "target": 8,
+          "unit": "glasses"
+        },
+        {
+          "name": "Yoga or a brisk walk",
+          "target": 1,
+          "unit": "session"
+        },
+        {
+          "name": "Sleep 7+ hours",
+          "target": 1,
+          "unit": "night"
+        },
+        {
+          "name": "Two servings of vegetables",
+          "target": 2,
+          "unit": "servings"
+        }
+      ],
+      "story": {
+        "bp_start": [
+          118,
+          76
+        ],
+        "bp_drift_90d": 0,
+        "fasting_sugar": 98,
+        "med_adherence": 0.97,
+        "activity_rate": 0.85,
+        "indulgent_meal_rate": 0.05,
+        "checkin_streak": 15
+      }
+    },
+    {
+      "name": "John Mathew",
+      "email": "john.mathew@care.test",
+      "password": "patient123",
+      "clinician": "arjun.shetty@riversidehealth.example",
+      "phone": "+1 (732) 555-0123",
+      "age": 71,
+      "gender": "Male",
+      "height_cm": 170,
+      "weight_kg": 80,
+      "blood_type": "AB+",
+      "allergies": null,
+      "emergency_contact": {
+        "name": "Annie Mathew (daughter)",
+        "phone": "+1 (732) 555-0133"
+      },
+      "calorie_goal": 1800,
+      "activity_goal_min": 20,
+      "medicines": [
+        {
+          "name": "Amlodipine",
+          "dose": "5 mg",
+          "times": "08:00"
+        },
+        {
+          "name": "Metformin",
+          "dose": "500 mg",
+          "times": "08:00,20:00"
+        },
+        {
+          "name": "Atorvastatin",
+          "dose": "20 mg",
+          "times": "21:00"
+        }
+      ],
+      "habits": [
+        {
+          "name": "Drink water",
+          "target": 6,
+          "unit": "glasses"
+        },
+        {
+          "name": "Short walk",
+          "target": 1,
+          "unit": "walk"
+        },
+        {
+          "name": "Take evening medicines",
+          "target": 1,
+          "unit": "day"
+        }
+      ],
+      "story": {
+        "bp_start": [
+          136,
+          86
+        ],
+        "bp_drift_90d": 5,
+        "fasting_sugar": 122,
+        "med_adherence": 0.55,
+        "activity_rate": 0.2,
+        "indulgent_meal_rate": 0.3,
+        "checkin_streak": 0
+      }
+    },
+    {
+      "name": "Priya Nair",
+      "email": "priya.nair@care.test",
+      "password": "patient123",
+      "clinician": "arjun.shetty@riversidehealth.example",
+      "phone": "+1 (732) 555-0124",
+      "age": 44,
+      "gender": "Female",
+      "height_cm": 163,
+      "weight_kg": 58,
+      "blood_type": "O-",
+      "allergies": "Shellfish",
+      "emergency_contact": {
+        "name": "Rahul Nair (husband)",
+        "phone": "+1 (732) 555-0134"
+      },
+      "calorie_goal": 1700,
+      "activity_goal_min": 45,
+      "medicines": [
+        {
+          "name": "Telmisartan",
+          "dose": "20 mg",
+          "times": "08:00"
+        }
+      ],
+      "habits": [
+        {
+          "name": "Drink water",
+          "target": 8,
+          "unit": "glasses"
+        },
+        {
+          "name": "Cycle or swim",
+          "target": 1,
+          "unit": "session"
+        },
+        {
+          "name": "No added salt at the table",
+          "target": 1,
+          "unit": "day"
+        },
+        {
+          "name": "Screens off by 10:30 PM",
+          "target": 1,
+          "unit": "night"
+        }
+      ],
+      "story": {
+        "bp_start": [
+          122,
+          78
+        ],
+        "bp_drift_90d": 0,
+        "fasting_sugar": 105,
+        "med_adherence": 0.92,
+        "activity_rate": 0.65,
+        "indulgent_meal_rate": 0.1,
+        "checkin_streak": 6
+      }
+    },
+    {
+      "name": "Sam Thomas",
+      "email": "sam.thomas@care.test",
+      "password": "patient123",
+      "clinician": "kavitha.menon@riversidehealth.example",
+      "phone": "+1 (732) 555-0125",
+      "age": 67,
+      "gender": "Male",
+      "height_cm": 175,
+      "weight_kg": 92,
+      "blood_type": "B-",
+      "allergies": "Aspirin (stomach upset)",
+      "emergency_contact": {
+        "name": "Grace Thomas (wife)",
+        "phone": "+1 (732) 555-0135"
+      },
+      "calorie_goal": 2000,
+      "activity_goal_min": 30,
+      "medicines": [
+        {
+          "name": "Amlodipine",
+          "dose": "10 mg",
+          "times": "08:00"
+        },
+        {
+          "name": "Losartan",
+          "dose": "50 mg",
+          "times": "08:00"
+        },
+        {
+          "name": "Atorvastatin",
+          "dose": "20 mg",
+          "times": "21:00"
+        }
+      ],
+      "habits": [
+        {
+          "name": "Drink water",
+          "target": 8,
+          "unit": "glasses"
+        },
+        {
+          "name": "Morning walk",
+          "target": 1,
+          "unit": "walk"
+        },
+        {
+          "name": "Under 2 g salt",
+          "target": 1,
+          "unit": "day"
+        },
+        {
+          "name": "Sleep 7+ hours",
+          "target": 1,
+          "unit": "night"
+        }
+      ],
+      "story": {
+        "bp_start": [
+          150,
+          94
+        ],
+        "bp_drift_90d": 12,
+        "fasting_sugar": 135,
+        "med_adherence": 0.7,
+        "activity_rate": 0.35,
+        "indulgent_meal_rate": 0.25,
+        "checkin_streak": 2
+      }
+    }
+  ],
+  "meals": {
+    "breakfast": [
+      "2 idli and a cup of sambar",
+      "oats and an apple",
+      "2 chapati and a boiled egg",
+      "poha and tea"
+    ],
+    "lunch": [
+      "2 chapati, a cup of dal and salad",
+      "1 cup brown rice and fish",
+      "1 cup rice, dal and vegetable curry",
+      "rajma and 1 cup rice"
+    ],
+    "snack": [
+      "an apple and 10 almonds",
+      "buttermilk",
+      "a guava",
+      "2 biscuits and tea"
+    ],
+    "dinner": [
+      "soup and 2 chapati",
+      "khichdi and curd",
+      "chicken and salad",
+      "1 cup rice and dal"
+    ]
+  },
+  "indulgent_meals": {
+    "lunch": [
+      "biryani and a soda",
+      "2 slice pizza and a burger"
+    ],
+    "snack": [
+      "2 samosa and tea",
+      "chips and cola"
+    ]
+  }
+}

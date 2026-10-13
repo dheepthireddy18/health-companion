@@ -10,9 +10,9 @@ A daily health tracker with two roles. **Patients** log habits, food, activity, 
 
 ## Roles
 
-**Patient** (`/`): status card (green/amber/red), daily check-in with streak (every 5th day is a milestone), food by plain-text ("2 idli and a cup of dal") with live typo check and calories, activity with calories burned, calorie and activity goals, a one-tap "my calories matched my goal", BMI calculator, blood pressure and sugar, medicines with reminders, habits. Every page has a **Contact clinician** button: 1. call local emergency, 2. chat, 3. call the clinician.
+**Patient**: **Today** (`/`) shows the status card (green/amber/red) and an animated check-in streak (every 5th day is a milestone). **Track** (`/track`) puts food by plain text ("2 idli and a cup of dal", with live typo check and calories), activity with calories burned, calorie and activity goals, a one-tap "my calories matched my goal", blood pressure, sugar and BMI on one page. Medicines have reminders; habits have counters. A round **contact button** in the bottom-right corner opens *Text* (chat) or *Call* the clinician on hover or tap. The local emergency number is in the profile menu (top right), next to **Profile** (personal and health details, emergency contact) and **Settings** (sound effects, animations, reminders, goals).
 
-**Clinician** (`/clinician`): all patients, most urgent first, with latest BP, sugar, BMI, streak and medicine adherence. Beside each name: a period picker (7/30/90 days) and a **Summary** button. Click a name for full records and chat.
+**Clinician** (`/clinician`): all patients, most urgent first, with latest BP, sugar, BMI, streak and medicine adherence. Beside each name: a period picker (7/30/90 days) and a **Summary** button. Click a name for full records. Chat lives in a collapsible dock (chat button, bottom-right) listing every conversation, searchable, with those awaiting a reply flagged. Clinicians also have Profile and Settings.
 
 Patients can only read and write their own rows (every query is filtered by `user_id`); clinicians cannot use patient endpoints and patients cannot use clinician ones.
 
@@ -33,14 +33,26 @@ npm run dev
 ```
 
 The frontend proxies `/api/*` to the backend (`BACKEND_URL`, default `http://127.0.0.1:8000`).
+Static data lives in JSON under `backend/app/data/`, not in code: `foods.json` (food table and the words the meal parser understands), `activities.json` (exercise MET values), `starter_habits.json` (habits given to newly registered patients) and `demo_data.json` (demo logins, profiles, medicines and each patient's story). Edit those and restart; reseed for demo changes.
 Set `SECRET_KEY` for any real deployment. Rebuild the demo data with `python -m app.seed --reset`; set `SEED_DEMO=0` to start empty.
 
-### Demo accounts (mock data: 6 patients, 90 days each)
+### Demo accounts (mock data: a small clinic, 6 patients, 90 days each)
+
+The login page has **Sign in** and **Create account** tabs. Sign in asks whether you are a patient or a clinician; an account used on the wrong one is refused. **Create account** registers a new patient (name, email, password, optional phone, age and gender), saves it to the database, assigns the clinician with the fewest patients, adds three starter habits and signs you in. Clinician accounts are only created by the clinic (seed data).
 
 | Role | Email | Password |
 |------|-------|----------|
-| Clinician | dr.nair@clinic.test, nurse.cho@clinic.test | clinician123 |
-| Patient | asha@, ravi@, meena@ (15-day streak), john@ (lapsed streak), priya@, sam@ `example.com` | patient123 |
+| Clinician | kavitha.menon@riversidehealth.example (endocrinology), arjun.shetty@riversidehealth.example (internal medicine) | clinician123 |
+| Patient | `@care.test`: asha.rao (BP rising), ravi.kumar (high sugar), meena.iyer (15-day streak, well controlled), john.mathew (lapsed streak, missed doses), priya.nair (stable), sam.thomas (stage 2 BP) | patient123 |
+
+Each patient has their own conditions, medicines, goals and profile. No chat history is seeded; conversations start when someone sends a message. Phone numbers use the fictional 555-01xx range and emails use reserved domains (`.test`, `.example`) that can never belong to a real person.
+
+### Sign in with Google (optional)
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials) create an **OAuth client ID** of type *Web application*, with `http://localhost:3000` as an authorized JavaScript origin.
+2. Start the backend with `export GOOGLE_CLIENT_ID=<your-client-id>.apps.googleusercontent.com`.
+
+The button then works on both tabs. An existing account signs in when its email matches the Google address. On the Patient tab a new address creates a patient account, assigned to the clinician with the fewest patients; clinicians cannot sign themselves up. The ID token is verified with Google (`app/google_auth.py`), checking that it was issued for this client ID to a verified email. Without `GOOGLE_CLIENT_ID` the button shows as unavailable.
 
 ## AI summaries and guardrails
 

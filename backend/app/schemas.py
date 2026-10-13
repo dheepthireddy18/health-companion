@@ -11,9 +11,28 @@ class ORM(BaseModel):
 
 
 # ---------- auth / profile ----------
+Role = Literal["patient", "clinician"]
+
+
 class LoginIn(BaseModel):
     email: str
     password: str
+    role: Optional[Role] = None  # the login tab used; a mismatch is refused
+
+
+class RegisterIn(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+    name: str = Field(min_length=2, max_length=80)
+    email: str = Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", max_length=254)
+    password: str = Field(min_length=8, max_length=128)
+    phone: Optional[str] = Field(None, max_length=30)
+    age: Optional[int] = Field(None, ge=13, le=120)
+    gender: Optional[str] = Field(None, max_length=30)
+
+
+class GoogleLoginIn(BaseModel):
+    credential: str = Field(min_length=10)
+    role: Role
 
 
 class UserOut(ORM):
@@ -26,10 +45,33 @@ class UserOut(ORM):
     calorie_goal: int
     activity_goal_min: int
     notifications_enabled: bool
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    height_cm: Optional[float] = None
+    blood_type: Optional[str] = None
+    allergies: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    bio: Optional[str] = None
+
+
+PROFILE_FIELDS = {"name", "phone", "age", "gender", "height_cm", "blood_type", "allergies",
+                  "emergency_contact_name", "emergency_contact_phone", "bio"}
 
 
 class SettingsIn(BaseModel):
-    """Everything a patient may change about themselves."""
+    """Profile fields anyone may change, plus patient-only goals and reminders."""
+    name: Optional[str] = Field(None, min_length=1, max_length=80)
+    phone: Optional[str] = Field(None, max_length=30)
+    age: Optional[int] = Field(None, ge=1, le=120)
+    gender: Optional[str] = Field(None, max_length=30)
+    height_cm: Optional[float] = Field(None, ge=50, le=250)
+    blood_type: Optional[str] = Field(None, max_length=5)
+    allergies: Optional[str] = Field(None, max_length=300)
+    emergency_contact_name: Optional[str] = Field(None, max_length=80)
+    emergency_contact_phone: Optional[str] = Field(None, max_length=30)
+    bio: Optional[str] = Field(None, max_length=500)
+    # patient-only
     emergency_number: Optional[str] = Field(None, max_length=20)
     calorie_goal: Optional[int] = Field(None, ge=800, le=4500)
     activity_goal_min: Optional[int] = Field(None, ge=0, le=300)
@@ -149,6 +191,14 @@ class HabitCount(BaseModel):
 
 class MessageIn(BaseModel):
     body: str = Field(min_length=1, max_length=1000)
+
+
+class ThreadOut(BaseModel):
+    patient_id: int
+    name: str
+    last_body: Optional[str] = None
+    last_from_role: Optional[str] = None
+    last_at: Optional[datetime] = None
 
 
 class MessageOut(BaseModel):

@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { api, getToken, setToken } from "@/lib/api";
+import { applyMotion } from "@/lib/prefs";
 import type { User } from "@/lib/types";
 import PatientShell from "@/components/PatientShell";
 import ClinicianShell from "@/components/ClinicianShell";
@@ -13,6 +14,9 @@ export const useAuth = () => {
   if (!ctx) throw new Error("useAuth outside AuthGate");
   return ctx;
 };
+
+/** Pages both roles use (their own profile and settings). */
+const SHARED = ["/profile", "/settings"];
 
 /** Signs people in, and keeps each role inside its own area (patients: /, clinicians: /clinician). */
 export default function AuthGate({ children }: { children: ReactNode }) {
@@ -26,19 +30,24 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     try { setUser(await api<User>("/auth/me")); } catch { setUser(null); }
   }, []);
 
-  useEffect(() => { refresh().finally(() => setReady(true)); }, [refresh]);
+  useEffect(() => { applyMotion(); refresh().finally(() => setReady(true)); }, [refresh]);
 
   const signOut = () => { setToken(null); setUser(null); router.replace("/login"); };
 
   useEffect(() => {
     if (!ready) return;
-    if (!user && path !== "/login") router.replace("/login");
-    else if (user && path === "/login") router.replace(user.role === "clinician" ? "/clinician" : "/");
-    else if (user?.role === "clinician" && !path.startsWith("/clinician")) router.replace("/clinician");
-    else if (user?.role === "patient" && path.startsWith("/clinician")) router.replace("/");
+    // Signed-in people may still open /login, to sign in as someone else in this tab.
+    if (path === "/login") return;
+    if (!user) router.replace("/login");
+    else if (user.role === "clinician" && !path.startsWith("/clinician") && !SHARED.includes(path)) router.replace("/clinician");
+    else if (user.role === "patient" && path.startsWith("/clinician")) router.replace("/");
   }, [ready, user, path, router]);
 
-  if (!ready) return <p className="p-6">Loading…</p>;
+  if (!ready) return (
+    <div className="grid min-h-screen place-items-center" role="status" aria-label="Loading">
+      <span className="h-10 w-10 animate-spin rounded-full border-[3px] border-brand-200 border-t-brand-600" />
+    </div>
+  );
   if (path === "/login") return <>{children}</>;
   if (!user) return null;
   const Shell = user.role === "clinician" ? ClinicianShell : PatientShell;

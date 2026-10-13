@@ -1,11 +1,35 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
 
-html { font-size: 18px; }
-body { @apply bg-slate-50 text-slate-900 antialiased; }
+html { font-size: 15px; }
+@media (min-width: 1024px) { html { font-size: 15.5px; } }
+body {
+  @apply min-h-screen bg-[#f6f8fb] text-ink antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
 
-/* Big, forgiving touch targets and clear focus */
-button, a, input, select, textarea { @apply focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-blue-600; }
-input, select, textarea { @apply w-full rounded-xl border-2 border-slate-400 bg-white px-4 py-3 text-base; }
-input[type="checkbox"] { @apply h-7 w-7 rounded-md p-0; width: 1.75rem; }
+@layer base {
+  button, a, input, select, textarea {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2;
+  }
+  input:not([type="checkbox"]):not([type="range"]), select, textarea {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[0.95rem] text-ink shadow-sm
+      placeholder:text-slate-400 transition focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15;
+  }
+  input[type="number"] { -moz-appearance: textfield; }
+  input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  ::selection { @apply bg-brand-200; }
+}
+
+@layer utilities {
+  .scrollbar-thin { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+  .text-balance { text-wrap: balance; }
+}
+
+/* Respect people who turn animations off. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="off"] *::after {
+  animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important;
+}

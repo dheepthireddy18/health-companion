@@ -1,0 +1,23 @@
+{
+  "about": "MET (metabolic equivalent) per activity; calories = MET x intensity factor x weight_kg x hours.",
+  "default_met": 3.5,
+  "met": {
+    "walking": 3.5,
+    "brisk walk": 4.3,
+    "jogging": 7.0,
+    "cycling": 6.0,
+    "swimming": 6.0,
+    "yoga": 2.5,
+    "stretching": 2.3,
+    "chair exercises": 2.5,
+    "strength training": 3.5,
+    "dancing": 4.5,
+    "gardening": 3.8,
+    "housework": 3.3
+  },
+  "intensity_factor": {
+    "light": 0.8,
+    "moderate": 1.0,
+    "vigorous": 1.25
+  }
+}

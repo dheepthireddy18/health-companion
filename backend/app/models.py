@@ -24,6 +24,14 @@ class User(Base):
     calorie_goal: Mapped[int] = mapped_column(Integer, default=1800)        # daily net calories
     activity_goal_min: Mapped[int] = mapped_column(Integer, default=30)     # daily active minutes
     notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    # profile (any role)
+    gender: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    height_cm: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    blood_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    allergies: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    emergency_contact_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    emergency_contact_phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    bio: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
 
 class GlucoseReading(Base):

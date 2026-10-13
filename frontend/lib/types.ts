@@ -1,6 +1,8 @@
 export interface User {
   id: number; name: string; email: string; role: "patient" | "clinician"; phone: string | null;
   emergency_number: string | null; calorie_goal: number; activity_goal_min: number; notifications_enabled: boolean;
+  age: number | null; gender: string | null; height_cm: number | null; blood_type: string | null; allergies: string | null;
+  emergency_contact_name: string | null; emergency_contact_phone: string | null; bio: string | null;
 }
 export interface Status { status: string; severity: number; message: string }
 export interface Glucose extends Status { id: number; measured_at: string; value: number; context: string }
@@ -22,6 +24,7 @@ export interface Home {
   streak: Streak; energy: Energy; clinician: { name: string; phone: string | null } | null;
 }
 export interface ChatMessage { id: number; from_role: "patient" | "clinician"; sender: string; body: string; created_at: string }
+export interface Thread { patient_id: number; name: string; last_body: string | null; last_from_role: ChatMessage["from_role"] | null; last_at: string | null }
 export interface Notice { tag: string; title: string; body: string; url: string }
 
 export interface PatientRow {

@@ -8,7 +8,7 @@ from conftest import login
 
 # ---------- roles ----------
 def test_login_rejects_bad_password(client):
-    assert client.post("/api/auth/login", json={"email": "meena@example.com", "password": "nope"}).status_code == 401
+    assert client.post("/api/auth/login", json={"email": "meena.iyer@care.test", "password": "nope"}).status_code == 401
 
 
 def test_requires_sign_in(client):
@@ -87,6 +87,15 @@ def test_goals_update(client, patient):
     client.patch("/api/auth/me", json={"calorie_goal": 1800, "activity_goal_min": 30}, headers=patient)
 
 
+def test_profile_update_any_role(client, patient, clinician):
+    r = client.patch("/api/auth/me", json={"blood_type": "O+", "height_cm": 162, "allergies": "Peanuts"}, headers=patient).json()
+    assert r["blood_type"] == "O+" and r["height_cm"] == 162 and r["allergies"] == "Peanuts"
+    assert client.patch("/api/auth/me", json={"allergies": "  "}, headers=patient).json()["allergies"] is None
+    assert client.patch("/api/auth/me", json={"bio": "Endocrinology"}, headers=clinician).json()["bio"] == "Endocrinology"
+    assert client.patch("/api/auth/me", json={"calorie_goal": 2000}, headers=clinician).status_code == 403
+    assert client.patch("/api/auth/me", json={"name": ""}, headers=patient).status_code == 422
+
+
 # ---------- check-in ----------
 def test_check_in_builds_streak_and_is_idempotent(client, other_patient):
     day = date(2031, 1, 1)
@@ -125,6 +134,10 @@ def test_chat_between_patient_and_clinician(client, patient, clinician):
     thread = client.get("/api/messages", headers=patient).json()
     assert [t["from_role"] for t in thread[-2:]] == ["patient", "clinician"]
     assert client.get(f"/api/clinician/patients/{pid}/messages", headers=clinician).json() == thread
+    first = client.get("/api/clinician/threads", headers=clinician).json()[0]
+    assert first["patient_id"] == pid and first["last_body"] == "Please come in tomorrow"
+    assert first["last_from_role"] == "clinician"
+    assert client.get("/api/clinician/threads", headers=patient).status_code == 403
 
 
 # ---------- clinician ----------
@@ -172,3 +185,12 @@ def test_food_preview_does_not_save(client, patient):
     r = client.post("/api/food/preview", json={"text": "2 idli and pizzza"}, headers=patient).json()
     assert r["total_calories"] == 130 and r["unmatched"] == ["pizzza"]
     assert client.get(f"/api/food?day={day}", headers=patient).json() == []
+
+
+def test_any_clinician_message_reaches_the_patient(client, other_patient):
+    """Ravi's own clinician is not this one, but the patient still sees the message in their thread."""
+    other_doc = login(client, "arjun.shetty@riversidehealth.example", "clinician123")
+    me = client.get("/api/auth/me", headers=other_patient).json()
+    sent = client.post(f"/api/clinician/patients/{me['id']}/messages", json={"body": "Checking in from the clinic"}, headers=other_doc).json()
+    thread = client.get("/api/messages", headers=other_patient).json()
+    assert thread[-1]["id"] == sent["id"] and thread[-1]["sender"] == "Dr. Arjun Shetty"
