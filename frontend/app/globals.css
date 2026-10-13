@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html { font-size: 18px; }
+body { @apply bg-slate-50 text-slate-900 antialiased; }
+
+/* Big, forgiving touch targets and clear focus */
+button, a, input, select, textarea { @apply focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-blue-600; }
+input, select, textarea { @apply w-full rounded-xl border-2 border-slate-400 bg-white px-4 py-3 text-base; }
+input[type="checkbox"] { @apply h-7 w-7 rounded-md p-0; width: 1.75rem; }
